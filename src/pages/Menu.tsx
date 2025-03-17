@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Pizza, Search, Filter, ShoppingCart } from 'lucide-react';
+import { Pizza, Search, Filter, ShoppingCart, Flame } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import {

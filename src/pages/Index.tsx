@@ -1,6 +1,7 @@
 
-import { Pizza, ArrowRight } from 'lucide-react';
+import { Pizza, ArrowRight, Flame } from 'lucide-react';
 import Header from '@/components/Header';
+import { PopularItems } from '@/components/PopularItems';
 
 const Index = () => {
   return (
@@ -40,6 +41,25 @@ const Index = () => {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+      
+      {/* Popular Items Section */}
+      <section id="popular" className="section-padding bg-brunch-50/30">
+        <div className="container">
+          <div className="text-center mb-12">
+            <span className="inline-block px-4 py-2 rounded-full bg-brunch-100 text-brunch-700 font-medium text-sm animate-fade-down">
+              Customer Favorites
+            </span>
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-brunch-900 mt-4 animate-fade-up">
+              Our Most Popular <span className="text-brunch-500">Pizzas</span>
+            </h2>
+            <p className="text-brunch-700 max-w-2xl mx-auto mt-4 animate-fade-up">
+              Discover the pizzas that our customers can't get enough of. Made with the freshest ingredients and crafted to perfection.
+            </p>
+          </div>
+          
+          <PopularItems />
         </div>
       </section>
       

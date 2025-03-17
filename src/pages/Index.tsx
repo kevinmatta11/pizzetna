@@ -2,6 +2,8 @@
 import { Pizza, ArrowRight, Flame } from 'lucide-react';
 import Header from '@/components/Header';
 import { PopularItems } from '@/components/PopularItems';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 const Index = () => {
   return (
@@ -23,10 +25,10 @@ const Index = () => {
                 Experience the perfect blend of crispy crust, fresh ingredients, and artisanal toppings, crafted with passion in every slice.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 animate-fade-up" style={{ animationDelay: '400ms' }}>
-                <a href="#menu" className="btn-primary group">
+                <Link to="/menu" className="btn-primary group">
                   <span>View Our Menu</span>
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </a>
+                </Link>
                 <a href="#about" className="btn-secondary">
                   Learn More
                 </a>
@@ -60,6 +62,13 @@ const Index = () => {
           </div>
           
           <PopularItems />
+          
+          <div className="text-center mt-12">
+            <Link to="/menu" className="btn-primary">
+              View Full Menu
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+          </div>
         </div>
       </section>
       

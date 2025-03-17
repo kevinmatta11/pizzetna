@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Pizza, Search, Filter, ShoppingCart, Flame } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
+import { useCart } from '@/contexts/CartContext';
 import {
   Card,
   CardContent,
@@ -143,6 +144,7 @@ const menuItems: PizzaItem[] = [
 const Menu = () => {
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const { addItem } = useCart();
 
   // Filter items based on category and search query
   const filteredItems = menuItems.filter(item => 
@@ -153,6 +155,15 @@ const Menu = () => {
 
   // Categories for filter
   const categories = ["All", "Classic", "Specialty", "Meat Lovers", "Vegetarian", "Gourmet"];
+
+  const handleAddToCart = (item: PizzaItem) => {
+    addItem({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      imageSrc: item.imageSrc
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-brunch-50/50 to-white">
@@ -253,7 +264,10 @@ const Menu = () => {
                     </div>
                   </CardContent>
                   <CardFooter className="p-4 pt-0">
-                    <Button className="w-full bg-brunch-500 hover:bg-brunch-600">
+                    <Button 
+                      className="w-full bg-brunch-500 hover:bg-brunch-600"
+                      onClick={() => handleAddToCart(item)}
+                    >
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       Add to Order
                     </Button>

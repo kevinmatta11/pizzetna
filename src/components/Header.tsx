@@ -1,14 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, LogIn, UserPlus } from 'lucide-react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, LogIn, UserPlus, LogOut, User } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Cart } from '@/components/Cart';
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut, isLoading } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +28,16 @@ const Header = () => {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Signed out successfully");
+      navigate("/");
+    } catch (error) {
+      toast.error("Error signing out");
+    }
+  };
 
   return (
     <header className={`fixed w-full z-30 transition-all duration-300 ${scrolled ? 'bg-white shadow-md py-2' : 'bg-transparent py-4'}`}>
@@ -58,14 +73,31 @@ const Header = () => {
 
         <div className="flex items-center gap-4">
           <div className="hidden md:flex items-center gap-2">
-            <Button variant="ghost" className="gap-2">
-              <LogIn className="h-4 w-4" />
-              Login
-            </Button>
-            <Button className="bg-brunch-500 hover:bg-brunch-600 text-white gap-2">
-              <UserPlus className="h-4 w-4" />
-              Register
-            </Button>
+            {!isLoading && (
+              user ? (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" className="gap-2">
+                    <User className="h-4 w-4" />
+                    {user.email?.split('@')[0]}
+                  </Button>
+                  <Button onClick={handleSignOut} variant="outline" className="gap-2">
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button variant="ghost" className="gap-2" onClick={() => navigate("/auth")}>
+                    <LogIn className="h-4 w-4" />
+                    Login
+                  </Button>
+                  <Button className="bg-brunch-500 hover:bg-brunch-600 text-white gap-2" onClick={() => navigate("/auth?tab=signup")}>
+                    <UserPlus className="h-4 w-4" />
+                    Register
+                  </Button>
+                </>
+              )
+            )}
           </div>
           
           <Cart />
@@ -102,14 +134,31 @@ const Header = () => {
                   About
                 </NavLink>
                 <div className="flex flex-col gap-2 mt-4">
-                  <Button variant="ghost" className="gap-2 justify-start">
-                    <LogIn className="h-4 w-4" />
-                    Login
-                  </Button>
-                  <Button className="bg-brunch-500 hover:bg-brunch-600 text-white gap-2 justify-start">
-                    <UserPlus className="h-4 w-4" />
-                    Register
-                  </Button>
+                  {!isLoading && (
+                    user ? (
+                      <>
+                        <div className="flex items-center gap-2 py-2">
+                          <User className="h-4 w-4" />
+                          <span className="text-sm font-medium">{user.email?.split('@')[0]}</span>
+                        </div>
+                        <Button onClick={handleSignOut} variant="outline" className="gap-2 justify-start">
+                          <LogOut className="h-4 w-4" />
+                          Logout
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="ghost" className="gap-2 justify-start" onClick={() => navigate("/auth")}>
+                          <LogIn className="h-4 w-4" />
+                          Login
+                        </Button>
+                        <Button className="bg-brunch-500 hover:bg-brunch-600 text-white gap-2 justify-start" onClick={() => navigate("/auth?tab=signup")}>
+                          <UserPlus className="h-4 w-4" />
+                          Register
+                        </Button>
+                      </>
+                    )
+                  )}
                 </div>
               </nav>
             </SheetContent>

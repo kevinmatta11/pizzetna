@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useCart } from '@/contexts/CartContext';
@@ -82,68 +83,68 @@ const Menu = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {menuItems.map((item) => (
-            <Dialog key={item.id}>
-              <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                <img
-                  src={item.imageSrc}
-                  alt={item.name}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-brunch-900 mb-2">{item.name}</h3>
-                      <p className="text-brunch-700 text-sm mb-4">{item.description}</p>
-                    </div>
-                    <span className="text-xl font-bold text-brunch-500">${item.price}</span>
+            <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+              <img
+                src={item.imageSrc}
+                alt={item.name}
+                className="w-full h-48 object-cover"
+              />
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-brunch-900 mb-2">{item.name}</h3>
+                    <p className="text-brunch-700 text-sm mb-4">{item.description}</p>
                   </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-brunch-600 mb-4">
-                    <div className="flex items-center gap-1">
-                      <Utensils className="h-4 w-4" />
-                      <span>{item.category}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{item.preparationTime}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Flame className="h-4 w-4" />
-                      <span>{item.spicyLevel}</span>
-                    </div>
+                  <span className="text-xl font-bold text-brunch-500">${item.price}</span>
+                </div>
+                
+                <div className="flex items-center gap-4 text-sm text-brunch-600 mb-4">
+                  <div className="flex items-center gap-1">
+                    <Utensils className="h-4 w-4" />
+                    <span>{item.category}</span>
                   </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    <span>{item.preparationTime}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Flame className="h-4 w-4" />
+                    <span>{item.spicyLevel}</span>
+                  </div>
+                </div>
 
-                  <div className="flex gap-2">
+                <div className="flex gap-2">
+                  <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="outline">View Details</Button>
                     </DialogTrigger>
-                    <Button 
-                      onClick={() => addItem(item)}
-                      className="bg-brunch-500 hover:bg-brunch-600 text-white"
-                    >
-                      Add to Order
-                    </Button>
-                  </div>
+                    <DialogContent>
+                      <div className="p-6">
+                        <h2 className="text-2xl font-semibold mb-4">{item.name}</h2>
+                        <img
+                          src={item.imageSrc}
+                          alt={item.name}
+                          className="w-full h-64 object-cover rounded-lg mb-4"
+                        />
+                        <p className="text-brunch-700 mb-4">{item.description}</p>
+                        <div className="space-y-2">
+                          <p><strong>Category:</strong> {item.category}</p>
+                          <p><strong>Preparation Time:</strong> {item.preparationTime}</p>
+                          <p><strong>Spicy Level:</strong> {item.spicyLevel}</p>
+                          <p><strong>Price:</strong> ${item.price}</p>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  <Button 
+                    onClick={() => addItem(item)}
+                    className="bg-brunch-500 hover:bg-brunch-600 text-white"
+                  >
+                    Add to Order
+                  </Button>
                 </div>
               </div>
-              <DialogContent>
-                <div className="p-6">
-                  <h2 className="text-2xl font-semibold mb-4">{item.name}</h2>
-                  <img
-                    src={item.imageSrc}
-                    alt={item.name}
-                    className="w-full h-64 object-cover rounded-lg mb-4"
-                  />
-                  <p className="text-brunch-700 mb-4">{item.description}</p>
-                  <div className="space-y-2">
-                    <p><strong>Category:</strong> {item.category}</p>
-                    <p><strong>Preparation Time:</strong> {item.preparationTime}</p>
-                    <p><strong>Spicy Level:</strong> {item.spicyLevel}</p>
-                    <p><strong>Price:</strong> ${item.price}</p>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+            </div>
           ))}
         </div>
       </div>

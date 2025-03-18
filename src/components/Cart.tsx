@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { X, Minus, Plus, ShoppingCart, CreditCard, Trash2 } from 'lucide-react';
@@ -146,52 +145,50 @@ export const Cart = () => {
 
   if (isDesktop) {
     return (
-      <>
+      <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <CartTrigger>
             {totalItems > 0 && <span className="sr-only">Open cart ({totalItems} items)</span>}
           </CartTrigger>
         </SheetTrigger>
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent className="w-[350px] sm:w-[450px] flex flex-col">
-            <SheetHeader>
-              <SheetTitle className="flex items-center">
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                Your Order {totalItems > 0 && `(${totalItems})`}
-              </SheetTitle>
-            </SheetHeader>
-            
-            {!showPayment ? (
-              <>
-                <div className="flex-1 overflow-auto">
-                  <CartItems />
-                </div>
-                <SheetFooter className="sm:justify-start mt-auto pt-2">
-                  <CartFooter />
-                </SheetFooter>
-              </>
-            ) : (
+        <SheetContent className="w-[350px] sm:w-[450px] flex flex-col">
+          <SheetHeader>
+            <SheetTitle className="flex items-center">
+              <ShoppingCart className="h-5 w-5 mr-2" />
+              Your Order {totalItems > 0 && `(${totalItems})`}
+            </SheetTitle>
+          </SheetHeader>
+          
+          {!showPayment ? (
+            <>
               <div className="flex-1 overflow-auto">
-                <Button 
-                  variant="ghost" 
-                  className="mb-4" 
-                  onClick={() => setShowPayment(false)}
-                >
-                  <X className="h-4 w-4 mr-2" /> Back to cart
-                </Button>
-                <PaymentForm 
-                  totalAmount={(totalPrice + 3.99).toFixed(2)} 
-                  onSuccess={() => {
-                    clearCart();
-                    setShowPayment(false);
-                    setOpen(false);
-                  }}
-                />
+                <CartItems />
               </div>
-            )}
-          </SheetContent>
-        </Sheet>
-      </>
+              <SheetFooter className="sm:justify-start mt-auto pt-2">
+                <CartFooter />
+              </SheetFooter>
+            </>
+          ) : (
+            <div className="flex-1 overflow-auto">
+              <Button 
+                variant="ghost" 
+                className="mb-4" 
+                onClick={() => setShowPayment(false)}
+              >
+                <X className="h-4 w-4 mr-2" /> Back to cart
+              </Button>
+              <PaymentForm 
+                totalAmount={(totalPrice + 3.99).toFixed(2)} 
+                onSuccess={() => {
+                  clearCart();
+                  setShowPayment(false);
+                  setOpen(false);
+                }}
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     );
   }
 

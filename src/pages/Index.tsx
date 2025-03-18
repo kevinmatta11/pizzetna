@@ -1,9 +1,10 @@
 
-import { Pizza, ArrowRight, Flame } from 'lucide-react';
+import { Pizza, ArrowRight } from 'lucide-react';
 import Header from '@/components/Header';
 import { PopularItems } from '@/components/PopularItems';
-import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import LocationSection from '@/components/LocationSection';
+import Footer from '@/components/Footer';
 
 const Index = () => {
   return (
@@ -29,7 +30,7 @@ const Index = () => {
                   <span>View Our Menu</span>
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <a href="#about" className="btn-secondary">
+                <a href="#popular" className="btn-secondary">
                   Learn More
                 </a>
               </div>
@@ -72,22 +73,11 @@ const Index = () => {
         </div>
       </section>
       
-      {/* Featured Section */}
-      <section className="section-padding bg-white">
-        <div className="container">
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Feature Cards */}
-            <div className="glass-card card-hover rounded-2xl p-6 animate-fade-up" style={{ animationDelay: '100ms' }}>
-              <div className="h-12 w-12 rounded-lg bg-brunch-100 flex items-center justify-center mb-4">
-                <Pizza className="h-6 w-6 text-brunch-500" />
-              </div>
-              <h3 className="text-xl font-semibold text-brunch-900 mb-2">Fresh Ingredients</h3>
-              <p className="text-brunch-700">We use only the freshest, locally-sourced ingredients for our artisanal pizzas.</p>
-            </div>
-            {/* Add more feature cards similarly */}
-          </div>
-        </div>
-      </section>
+      {/* Location Section (replacing the Featured Section) */}
+      <LocationSection />
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

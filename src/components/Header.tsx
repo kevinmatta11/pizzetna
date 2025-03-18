@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LogIn, UserPlus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Cart } from '@/components/Cart';
@@ -55,16 +54,20 @@ const Header = () => {
           }>
             About
           </NavLink>
-          <NavLink to="/contact" className={({ isActive }) => 
-            `text-sm font-medium transition ${isActive 
-              ? 'text-brunch-500' 
-              : 'text-brunch-700 hover:text-brunch-500'}`
-          }>
-            Contact
-          </NavLink>
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2">
+            <Button variant="ghost" className="gap-2">
+              <LogIn className="h-4 w-4" />
+              Login
+            </Button>
+            <Button className="bg-brunch-500 hover:bg-brunch-600 text-white gap-2">
+              <UserPlus className="h-4 w-4" />
+              Register
+            </Button>
+          </div>
+          
           <Cart />
 
           {/* Mobile Menu Button */}
@@ -98,13 +101,16 @@ const Header = () => {
                 }>
                   About
                 </NavLink>
-                <NavLink to="/contact" className={({ isActive }) => 
-                  `py-2 text-base font-medium transition ${isActive 
-                    ? 'text-brunch-500' 
-                    : 'text-brunch-700 hover:text-brunch-500'}`
-                }>
-                  Contact
-                </NavLink>
+                <div className="flex flex-col gap-2 mt-4">
+                  <Button variant="ghost" className="gap-2 justify-start">
+                    <LogIn className="h-4 w-4" />
+                    Login
+                  </Button>
+                  <Button className="bg-brunch-500 hover:bg-brunch-600 text-white gap-2 justify-start">
+                    <UserPlus className="h-4 w-4" />
+                    Register
+                  </Button>
+                </div>
               </nav>
             </SheetContent>
           </Sheet>

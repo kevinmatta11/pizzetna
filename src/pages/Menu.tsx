@@ -1,12 +1,14 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useCart } from '@/contexts/CartContext';
-import { Pizza, Utensils, Clock, Flame } from 'lucide-react';
+import { Pizza, Utensils, Clock, Flame, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import Header from '@/components/Header';
 
 const Menu = () => {
   const { addItem } = useCart();
+  const navigate = useNavigate();
 
   const menuItems = [
     {
@@ -17,7 +19,7 @@ const Menu = () => {
       category: "Classic",
       preparationTime: "20 mins",
       spicyLevel: "Mild",
-      imageSrc: "/placeholder.svg"
+      imageSrc: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=500&h=500&fit=crop"
     },
     {
       id: 2,
@@ -27,7 +29,7 @@ const Menu = () => {
       category: "Classic",
       preparationTime: "25 mins",
       spicyLevel: "Mild",
-      imageSrc: "/placeholder.svg"
+      imageSrc: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=500&h=500&fit=crop"
     },
     {
       id: 3,
@@ -72,8 +74,18 @@ const Menu = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brunch-50/50 to-white pt-20">
+    <div className="min-h-screen bg-gradient-to-b from-brunch-50/50 to-white">
+      <Header />
       <div className="container mx-auto px-4 py-8">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate('/')}
+          className="mb-8 hover:bg-brunch-100"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Home
+        </Button>
+
         <div className="text-center mb-12">
           <h1 className="text-4xl font-display font-bold text-brunch-900 mb-4">Our Menu</h1>
           <p className="text-brunch-700 max-w-2xl mx-auto">

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Navigate, Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, PizzaIcon, Tag, PackageBox, ShoppingCart, BarChart2, Users, Settings } from "lucide-react";
+import { LayoutDashboard, PizzaIcon, Tag, Package, ShoppingCart, BarChart2, Users, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -90,7 +90,7 @@ const AdminLayout = () => {
         {/* Sidebar */}
         <div className="hidden md:flex w-64 flex-col border-r p-6">
           <div className="flex items-center gap-2 mb-8">
-            <PackageBox className="h-6 w-6 text-brunch-500" />
+            <Package className="h-6 w-6 text-brunch-500" />
             <h1 className="font-semibold text-xl">Admin Panel</h1>
           </div>
           

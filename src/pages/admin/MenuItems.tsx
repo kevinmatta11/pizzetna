@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -8,7 +7,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose 
 } from "@/components/ui/dialog";
 import { 
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose 
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose, SheetTrigger
 } from "@/components/ui/sheet";
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
@@ -65,12 +64,10 @@ const AdminMenuItems = () => {
     image_url: ""
   });
 
-  // Fetch menu items and categories on load
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch categories
         const { data: categoriesData, error: categoriesError } = await supabase
           .from("categories")
           .select("*")
@@ -79,7 +76,6 @@ const AdminMenuItems = () => {
         if (categoriesError) throw categoriesError;
         setCategories(categoriesData || []);
 
-        // Fetch menu items with category names
         const { data: menuItemsData, error: menuItemsError } = await supabase
           .from("menu_items")
           .select(`
@@ -90,7 +86,6 @@ const AdminMenuItems = () => {
 
         if (menuItemsError) throw menuItemsError;
         
-        // Format the data to include category name
         const formattedMenuItems = menuItemsData.map((item: any) => ({
           ...item,
           category_name: item.categories?.name || "Uncategorized"
@@ -108,7 +103,6 @@ const AdminMenuItems = () => {
     fetchData();
   }, []);
 
-  // Handle sorting
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -118,10 +112,8 @@ const AdminMenuItems = () => {
     }
   };
 
-  // Handle add new item
   const handleAddItem = async () => {
     try {
-      // Basic validation
       if (!newItem.name || !newItem.price || !newItem.category_id) {
         toast.error("Please fill in all required fields");
         return;
@@ -138,7 +130,6 @@ const AdminMenuItems = () => {
 
       if (error) throw error;
 
-      // Add to list with category name
       const newMenuItemWithCategory = {
         ...data,
         category_name: categories.find(c => c.id === data.category_id)?.name || "Uncategorized"
@@ -146,7 +137,6 @@ const AdminMenuItems = () => {
 
       setMenuItems([...menuItems, newMenuItemWithCategory]);
       
-      // Reset form
       setNewItem({
         name: "",
         description: "",
@@ -157,7 +147,6 @@ const AdminMenuItems = () => {
         image_url: ""
       });
       
-      // Close the dialog
       setIsAddDialogOpen(false);
       
       toast.success("Menu item added successfully");
@@ -167,12 +156,10 @@ const AdminMenuItems = () => {
     }
   };
 
-  // Handle update item
   const handleUpdateItem = async () => {
     if (!editingItem) return;
 
     try {
-      // Basic validation
       if (!editingItem.name || !editingItem.price || !editingItem.category_id) {
         toast.error("Please fill in all required fields");
         return;
@@ -198,7 +185,6 @@ const AdminMenuItems = () => {
 
       if (error) throw error;
 
-      // Update item in list with category name
       const updatedItemWithCategory = {
         ...data,
         category_name: categories.find(c => c.id === data.category_id)?.name || "Uncategorized"
@@ -208,7 +194,6 @@ const AdminMenuItems = () => {
         item.id === editingItem.id ? updatedItemWithCategory : item
       ));
       
-      // Reset editing state
       setEditingItem(null);
       
       toast.success("Menu item updated successfully");
@@ -218,7 +203,6 @@ const AdminMenuItems = () => {
     }
   };
 
-  // Handle delete item
   const handleDeleteItem = async () => {
     if (!itemToDelete) return;
 
@@ -230,7 +214,6 @@ const AdminMenuItems = () => {
 
       if (error) throw error;
 
-      // Remove from list
       setMenuItems(menuItems.filter(item => item.id !== itemToDelete));
       
       toast.success("Menu item deleted successfully");
@@ -243,7 +226,6 @@ const AdminMenuItems = () => {
     }
   };
 
-  // Filter and sort items
   const filteredItems = menuItems
     .filter(item => 
       (item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -265,7 +247,6 @@ const AdminMenuItems = () => {
       }
     });
 
-  // Render sort icon
   const renderSortIcon = (field: string) => {
     if (sortField !== field) return <ArrowUpDown className="ml-2 h-4 w-4" />;
     return sortDirection === "asc" 
@@ -273,7 +254,6 @@ const AdminMenuItems = () => {
       : <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
-  // Reset new item form
   const resetNewItemForm = () => {
     setNewItem({
       name: "",
@@ -307,7 +287,6 @@ const AdminMenuItems = () => {
         </Button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-center mb-6">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -336,7 +315,6 @@ const AdminMenuItems = () => {
         </Select>
       </div>
 
-      {/* Menu Items Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -518,7 +496,6 @@ const AdminMenuItems = () => {
         </Table>
       </div>
 
-      {/* Add Item Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -620,7 +597,6 @@ const AdminMenuItems = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

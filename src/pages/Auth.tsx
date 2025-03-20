@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,8 +60,14 @@ const Auth = () => {
       
       if (error) throw error;
       
-      toast.success("Sign in successful!");
-      navigate("/");
+      // Check if user is admin to redirect
+      if (email === "admin@pizzabrunch.com") {
+        navigate("/admin");
+        toast.success("Signed in as admin!");
+      } else {
+        navigate("/");
+        toast.success("Sign in successful!");
+      }
     } catch (error: any) {
       setError(error.message);
     } finally {

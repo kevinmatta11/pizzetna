@@ -80,7 +80,6 @@ const AdminLayout = () => {
     { to: "/admin/categories", label: "Categories", icon: Tag },
     { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
     { to: "/admin/analytics", label: "Analytics", icon: BarChart2 },
-    { to: "/admin/users", label: "Users", icon: Users },
     { to: "/admin/settings", label: "Settings", icon: Settings },
   ];
 

@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
@@ -54,6 +53,7 @@ const AdminMenuItems = () => {
   const [sortField, setSortField] = useState<string>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filterCategory, setFilterCategory] = useState<string>("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const [newItem, setNewItem] = useState<Omit<MenuItem, "id" | "category_name">>({
     name: "",
@@ -157,6 +157,9 @@ const AdminMenuItems = () => {
         image_url: ""
       });
       
+      // Close the dialog
+      setIsAddDialogOpen(false);
+      
       toast.success("Menu item added successfully");
     } catch (error: any) {
       console.error("Error adding item:", error);
@@ -244,7 +247,7 @@ const AdminMenuItems = () => {
   const filteredItems = menuItems
     .filter(item => 
       (item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-       item.description.toLowerCase().includes(searchQuery.toLowerCase())) &&
+       item.description?.toLowerCase().includes(searchQuery.toLowerCase())) &&
       (filterCategory === "" || item.category_id === filterCategory)
     )
     .sort((a, b) => {
@@ -270,6 +273,19 @@ const AdminMenuItems = () => {
       : <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
+  // Reset new item form
+  const resetNewItemForm = () => {
+    setNewItem({
+      name: "",
+      description: "",
+      price: 0,
+      category_id: "",
+      preparation_time: "",
+      spicy_level: "",
+      image_url: ""
+    });
+  };
+
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
@@ -280,111 +296,15 @@ const AdminMenuItems = () => {
           </p>
         </div>
 
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="mt-4 md:mt-0">
-              <Plus className="mr-2 h-4 w-4" /> Add New Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Add New Menu Item</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="name" className="text-right">Name*</label>
-                <Input
-                  id="name"
-                  value={newItem.name}
-                  onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="description" className="text-right">Description</label>
-                <Input
-                  id="description"
-                  value={newItem.description || ""}
-                  onChange={(e) => setNewItem({...newItem, description: e.target.value})}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="price" className="text-right">Price*</label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={newItem.price || ""}
-                  onChange={(e) => setNewItem({...newItem, price: parseFloat(e.target.value)})}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="category" className="text-right">Category*</label>
-                <Select 
-                  value={newItem.category_id} 
-                  onValueChange={(value) => setNewItem({...newItem, category_id: value})}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="prep_time" className="text-right">Prep Time</label>
-                <Input
-                  id="prep_time"
-                  value={newItem.preparation_time || ""}
-                  onChange={(e) => setNewItem({...newItem, preparation_time: e.target.value})}
-                  placeholder="e.g. 15-20 minutes"
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="spicy_level" className="text-right">Spicy Level</label>
-                <Select 
-                  value={newItem.spicy_level || ""} 
-                  onValueChange={(value) => setNewItem({...newItem, spicy_level: value})}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select spicy level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Not Spicy">Not Spicy</SelectItem>
-                    <SelectItem value="Mild">Mild</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="Hot">Hot</SelectItem>
-                    <SelectItem value="Extra Hot">Extra Hot</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="image_url" className="text-right">Image URL</label>
-                <Input
-                  id="image_url"
-                  value={newItem.image_url || ""}
-                  onChange={(e) => setNewItem({...newItem, image_url: e.target.value})}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button onClick={handleAddItem}>Add Item</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          className="mt-4 md:mt-0"
+          onClick={() => {
+            resetNewItemForm();
+            setIsAddDialogOpen(true);
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" /> Add New Item
+        </Button>
       </div>
 
       {/* Filters */}
@@ -469,6 +389,15 @@ const AdminMenuItems = () => {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Sheet>
+                        <SheetTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => setEditingItem(item)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </SheetTrigger>
                         <SheetContent className="sm:max-w-[600px]">
                           <SheetHeader>
                             <SheetTitle>Edit Menu Item</SheetTitle>
@@ -569,13 +498,6 @@ const AdminMenuItems = () => {
                             <Button onClick={handleUpdateItem}>Save Changes</Button>
                           </SheetFooter>
                         </SheetContent>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => setEditingItem(item)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
                       </Sheet>
                       <Button 
                         variant="ghost" 
@@ -595,6 +517,108 @@ const AdminMenuItems = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* Add Item Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Menu Item</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="name" className="text-right">Name*</label>
+              <Input
+                id="name"
+                value={newItem.name}
+                onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="description" className="text-right">Description</label>
+              <Input
+                id="description"
+                value={newItem.description || ""}
+                onChange={(e) => setNewItem({...newItem, description: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="price" className="text-right">Price*</label>
+              <Input
+                id="price"
+                type="number"
+                value={newItem.price || ""}
+                onChange={(e) => setNewItem({...newItem, price: parseFloat(e.target.value)})}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="category" className="text-right">Category*</label>
+              <Select 
+                value={newItem.category_id} 
+                onValueChange={(value) => setNewItem({...newItem, category_id: value})}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="prep_time" className="text-right">Prep Time</label>
+              <Input
+                id="prep_time"
+                value={newItem.preparation_time || ""}
+                onChange={(e) => setNewItem({...newItem, preparation_time: e.target.value})}
+                placeholder="e.g. 15-20 minutes"
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="spicy_level" className="text-right">Spicy Level</label>
+              <Select 
+                value={newItem.spicy_level || ""} 
+                onValueChange={(value) => setNewItem({...newItem, spicy_level: value})}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select spicy level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Not Spicy">Not Spicy</SelectItem>
+                  <SelectItem value="Mild">Mild</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="Hot">Hot</SelectItem>
+                  <SelectItem value="Extra Hot">Extra Hot</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="image_url" className="text-right">Image URL</label>
+              <Input
+                id="image_url"
+                value={newItem.image_url || ""}
+                onChange={(e) => setNewItem({...newItem, image_url: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddItem}>Add Item</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

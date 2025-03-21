@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Flame } from 'lucide-react';
-import { PageHeader } from '@/components/PageHeader';
+import PageHeader from '@/components/PageHeader';
 
 interface MenuItem {
   id: string;

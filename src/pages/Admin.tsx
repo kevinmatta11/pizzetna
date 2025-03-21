@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import { Navigate, Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, PizzaIcon, Tag, Package, ShoppingCart, BarChart2, Users, Settings } from "lucide-react";
+import { LayoutDashboard, PizzaIcon, Tag, Package, ShoppingCart, BarChart2, Users, Settings, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
 const AdminLayout = () => {
@@ -86,7 +87,44 @@ const AdminLayout = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 flex">
-        {/* Sidebar */}
+        {/* Mobile menu button */}
+        <div className="md:hidden p-4">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64">
+              <div className="flex items-center gap-2 mb-8">
+                <Package className="h-6 w-6 text-brunch-500" />
+                <h1 className="font-semibold text-xl">Admin Panel</h1>
+              </div>
+              <nav className="space-y-2">
+                {navItems.map(({ to, label, icon: Icon, exact }) => {
+                  const isActive = exact 
+                    ? location.pathname === to 
+                    : location.pathname.startsWith(to);
+                  
+                  return (
+                    <Link key={to} to={to}>
+                      <Button 
+                        variant={isActive ? "default" : "ghost"} 
+                        className="w-full justify-start gap-2"
+                      >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </Button>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        {/* Desktop Sidebar */}
         <div className="hidden md:flex w-64 flex-col border-r p-6">
           <div className="flex items-center gap-2 mb-8">
             <Package className="h-6 w-6 text-brunch-500" />

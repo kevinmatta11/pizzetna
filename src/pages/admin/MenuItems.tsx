@@ -226,28 +226,30 @@ const AdminMenuItems = () => {
     }
   };
 
-  const filteredItems = menuItems
-    .filter(item => 
-      (item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-       item.description?.toLowerCase().includes(searchQuery.toLowerCase())) &&
-      (filterCategory === "" || item.category_id === filterCategory)
-    )
-    .sort((a, b) => {
-      if (sortField === "price") {
-        return sortDirection === "asc" 
-          ? a.price - b.price 
-          : b.price - a.price;
-      } else {
-        const aValue = a[sortField as keyof MenuItem] || "";
-        const bValue = b[sortField as keyof MenuItem] || "";
-        
-        return sortDirection === "asc"
-          ? String(aValue).localeCompare(String(bValue))
-          : String(bValue).localeCompare(String(aValue));
-      }
-    });
+  const filteredItems = (menuItems, searchQuery, filterCategory, sortField, sortDirection) => {
+    return menuItems
+      .filter(item => 
+        (item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+         item.description?.toLowerCase().includes(searchQuery.toLowerCase())) &&
+        (filterCategory === "" || filterCategory === "all-categories" || item.category_id === filterCategory)
+      )
+      .sort((a, b) => {
+        if (sortField === "price") {
+          return sortDirection === "asc" 
+            ? a.price - b.price 
+            : b.price - a.price;
+        } else {
+          const aValue = a[sortField as keyof MenuItem] || "";
+          const bValue = b[sortField as keyof MenuItem] || "";
+          
+          return sortDirection === "asc"
+            ? String(aValue).localeCompare(String(bValue))
+            : String(bValue).localeCompare(String(aValue));
+        }
+      });
+  };
 
-  const renderSortIcon = (field: string) => {
+  const renderSortIcon = (field, sortField, sortDirection) => {
     if (sortField !== field) return <ArrowUpDown className="ml-2 h-4 w-4" />;
     return sortDirection === "asc" 
       ? <ArrowUp className="ml-2 h-4 w-4" />
@@ -255,7 +257,7 @@ const AdminMenuItems = () => {
   };
 
   const resetNewItemForm = () => {
-    setNewItem({
+    return {
       name: "",
       description: "",
       price: 0,
@@ -263,7 +265,7 @@ const AdminMenuItems = () => {
       preparation_time: "",
       spicy_level: "",
       image_url: ""
-    });
+    };
   };
 
   return (
@@ -305,7 +307,7 @@ const AdminMenuItems = () => {
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="all-categories">All Categories</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
                 {category.name}
@@ -321,18 +323,18 @@ const AdminMenuItems = () => {
             <TableRow>
               <TableHead className="w-[200px]">
                 <Button variant="ghost" className="p-0 hover:bg-transparent" onClick={() => handleSort("name")}>
-                  Item Name {renderSortIcon("name")}
+                  Item Name {renderSortIcon("name", sortField, sortDirection)}
                 </Button>
               </TableHead>
               <TableHead className="hidden md:table-cell">Description</TableHead>
               <TableHead>
                 <Button variant="ghost" className="p-0 hover:bg-transparent" onClick={() => handleSort("price")}>
-                  Price {renderSortIcon("price")}
+                  Price {renderSortIcon("price", sortField, sortDirection)}
                 </Button>
               </TableHead>
               <TableHead className="hidden md:table-cell">
                 <Button variant="ghost" className="p-0 hover:bg-transparent" onClick={() => handleSort("category_name")}>
-                  Category {renderSortIcon("category_name")}
+                  Category {renderSortIcon("category_name", sortField, sortDirection)}
                 </Button>
               </TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -345,14 +347,14 @@ const AdminMenuItems = () => {
                   Loading menu items...
                 </TableCell>
               </TableRow>
-            ) : filteredItems.length === 0 ? (
+            ) : filteredItems(menuItems, searchQuery, filterCategory, sortField, sortDirection).length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8">
                   No menu items found. Add some new items!
                 </TableCell>
               </TableRow>
             ) : (
-              filteredItems.map((item) => (
+              filteredItems(menuItems, searchQuery, filterCategory, sortField, sortDirection).map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="hidden md:table-cell">
@@ -615,4 +617,47 @@ const AdminMenuItems = () => {
   );
 };
 
+const filteredItems = (menuItems, searchQuery, filterCategory, sortField, sortDirection) => {
+  return menuItems
+    .filter(item => 
+      (item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+       item.description?.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      (filterCategory === "" || filterCategory === "all-categories" || item.category_id === filterCategory)
+    )
+    .sort((a, b) => {
+      if (sortField === "price") {
+        return sortDirection === "asc" 
+          ? a.price - b.price 
+          : b.price - a.price;
+      } else {
+        const aValue = a[sortField as keyof MenuItem] || "";
+        const bValue = b[sortField as keyof MenuItem] || "";
+        
+        return sortDirection === "asc"
+          ? String(aValue).localeCompare(String(bValue))
+          : String(bValue).localeCompare(String(aValue));
+      }
+    });
+};
+
+const renderSortIcon = (field, sortField, sortDirection) => {
+  if (sortField !== field) return <ArrowUpDown className="ml-2 h-4 w-4" />;
+  return sortDirection === "asc" 
+    ? <ArrowUp className="ml-2 h-4 w-4" />
+    : <ArrowDown className="ml-2 h-4 w-4" />;
+};
+
+const resetNewItemForm = () => {
+  return {
+    name: "",
+    description: "",
+    price: 0,
+    category_id: "",
+    preparation_time: "",
+    spicy_level: "",
+    image_url: ""
+  };
+};
+
 export default AdminMenuItems;
+

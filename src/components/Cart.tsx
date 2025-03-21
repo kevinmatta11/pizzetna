@@ -81,11 +81,15 @@ export const Cart = () => {
         .select('id')
         .single();
       
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error("Order error:", orderError);
+        throw orderError;
+      }
       
       const newOrderId = orderData.id;
       setOrderId(newOrderId);
       
+      // Convert menu_item_id to string for all order items
       const orderItems = items.map(item => ({
         order_id: newOrderId,
         price: item.price,
@@ -93,22 +97,28 @@ export const Cart = () => {
         menu_item_id: item.id.toString() // Convert id to string
       }));
       
+      // Insert order items as an array
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
       
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error("Order items error:", itemsError);
+        throw itemsError;
+      }
       
       if (pointsApplied > 0) {
         await loyaltyService.redeemPoints(pointsApplied, newOrderId);
       }
       
       toast.success("Your order has been placed successfully!");
+      // Always proceed to spin step if order is successful
       setCheckoutStep('spin');
     } catch (error) {
       console.error("Error creating order:", error);
       toast.error("There was a problem with your order. Please try again.");
-      setCheckoutStep('confirmation');
+      // Do not change to confirmation on error, stay at payment
+      setCheckoutStep('payment');
     }
   };
 
@@ -116,7 +126,7 @@ export const Cart = () => {
     handlePaymentSuccess();
   };
 
-  const handleSpinComplete = () => {
+  const handleSpinComplete = (points: number) => {
     setCheckoutStep('confirmation');
     setTimeout(() => {
       clearCart();
@@ -335,7 +345,7 @@ export const Cart = () => {
   const OrderSpin = () => (
     <div className="flex flex-col items-center py-4 text-center">
       <h3 className="text-xl font-medium text-brunch-900 mb-6">Spin to Win Loyalty Points!</h3>
-      <SpinningWheel onComplete={handleSpinComplete} />
+      <SpinningWheel onComplete={handleSpinComplete} hasSpinAvailable={true} />
     </div>
   );
 

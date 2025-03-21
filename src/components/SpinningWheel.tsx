@@ -53,42 +53,54 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
     setIsSpinning(true);
     setResult(null);
     
-    // Determine the winning segment (weighted random)
-    const winningSegmentIndex = getWeightedRandomSegment();
-    
-    // Calculate the rotation to land on the winning segment
-    // Each segment is 360/segments.length degrees
-    const segmentAngle = 360 / segments.length;
-    
-    // Rotate at least 5 full spins (1800 degrees) plus the offset to land on the segment
-    // We need to add 0.5 * segmentAngle to land in the middle of the segment
-    const targetRotation = 1800 + (winningSegmentIndex * segmentAngle) + (0.5 * segmentAngle);
-    
-    // Add some randomness to make it look more natural
-    const randomOffset = Math.random() * (segmentAngle * 0.7);
-    const finalRotation = rotation + targetRotation + randomOffset;
-    
-    setRotation(finalRotation);
-    
-    // Wait for animation to complete
-    setTimeout(async () => {
-      const points = segments[winningSegmentIndex].value;
-      setResult(points);
+    try {
+      // Determine the winning segment (weighted random)
+      const winningSegmentIndex = getWeightedRandomSegment();
       
-      if (points > 0) {
-        // Add points to user's balance
-        await loyaltyService.addPointsFromSpin(points);
-      } else {
-        toast.info("Better luck next time!");
-      }
+      // Calculate the rotation to land on the winning segment
+      // Each segment is 360/segments.length degrees
+      const segmentAngle = 360 / segments.length;
       
-      if (onComplete) {
-        onComplete(points);
-      }
+      // Rotate at least 5 full spins (1800 degrees) plus the offset to land on the segment
+      // We need to add 0.5 * segmentAngle to land in the middle of the segment
+      const targetRotation = 1800 + (winningSegmentIndex * segmentAngle) + (0.5 * segmentAngle);
       
-      // Reset the spinning state but keep the rotation value
+      // Add some randomness to make it look more natural
+      const randomOffset = Math.random() * (segmentAngle * 0.7);
+      const finalRotation = rotation + targetRotation + randomOffset;
+      
+      setRotation(finalRotation);
+      
+      // Wait for animation to complete
+      setTimeout(async () => {
+        const points = segments[winningSegmentIndex].value;
+        setResult(points);
+        
+        if (points > 0) {
+          try {
+            // Add points to user's balance
+            await loyaltyService.addPointsFromSpin(points);
+          } catch (error) {
+            console.error("Error adding points:", error);
+            toast.error("Failed to add points. Please try again.");
+          }
+        } else {
+          toast.info("Better luck next time!");
+        }
+        
+        // Always call onComplete, even if points were not added successfully
+        if (onComplete) {
+          onComplete(points);
+        }
+        
+        // Reset the spinning state but keep the rotation value
+        setIsSpinning(false);
+      }, 5000); // 5 seconds to match animation duration
+    } catch (error) {
+      console.error("Error in spinWheel:", error);
       setIsSpinning(false);
-    }, 5000); // 5 seconds to match animation duration
+      toast.error("Something went wrong with the spin. Please try again.");
+    }
   };
 
   return (

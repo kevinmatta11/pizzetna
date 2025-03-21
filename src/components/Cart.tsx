@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
-import { X, Minus, Plus, ShoppingCart, CreditCard, Trash2, TruckIcon, Check } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { X, Minus, Plus, ShoppingCart, CreditCard, Trash2, TruckIcon, Check, Coin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -30,17 +30,25 @@ import { useMediaQuery } from '@/hooks/use-media-query';
 import { Separator } from '@/components/ui/separator';
 import { PaymentForm } from '@/components/PaymentForm';
 import { DeliveryForm, DeliveryFormData } from '@/components/DeliveryForm';
+import { PointsRedemptionForm } from '@/components/PointsRedemptionForm';
+import { SpinningWheel } from '@/components/SpinningWheel';
+import { supabase } from "@/integrations/supabase/client";
+import { loyaltyService } from '@/services/loyaltyService';
 import { toast } from 'sonner';
 
-type CheckoutStep = 'cart' | 'delivery' | 'payment' | 'confirmation';
+type CheckoutStep = 'cart' | 'delivery' | 'payment' | 'confirmation' | 'spin';
 type PaymentMethod = 'credit' | 'cash';
 
 export const Cart = () => {
   const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryFormData | null>(null);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('cart');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit');
+  const [pointsApplied, setPointsApplied] = useState(0);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const handleCheckout = () => {
@@ -53,20 +61,80 @@ export const Cart = () => {
     setCheckoutStep('payment');
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
+    if (!user) {
+      toast.error("You must be logged in to complete your order");
+      return;
+    }
+    
+    try {
+      const finalAmount = Math.max(0, totalPrice + 3.99 - discountAmount);
+      
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          total_amount: finalAmount,
+          status: 'paid'
+        })
+        .select('id')
+        .single();
+      
+      if (orderError) throw orderError;
+      
+      const newOrderId = orderData.id;
+      setOrderId(newOrderId);
+      
+      const orderItems = items.map(item => ({
+        order_id: newOrderId,
+        price: item.price,
+        quantity: item.quantity,
+        menu_item_id: item.id
+      }));
+      
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+      
+      if (itemsError) throw itemsError;
+      
+      if (pointsApplied > 0) {
+        await loyaltyService.redeemPoints(pointsApplied, newOrderId);
+      }
+      
+      toast.success("Your order has been placed successfully!");
+      setCheckoutStep('spin');
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast.error("There was a problem with your order. Please try again.");
+      setCheckoutStep('confirmation');
+    }
+  };
+
+  const handleCashPayment = () => {
+    handlePaymentSuccess();
+  };
+
+  const handleSpinComplete = () => {
     setCheckoutStep('confirmation');
     setTimeout(() => {
       clearCart();
       setOpen(false);
       setCheckoutStep('cart');
       setDeliveryInfo(null);
+      setPointsApplied(0);
+      setDiscountAmount(0);
+      setOrderId(null);
     }, 3000);
   };
 
-  const handleCashPayment = () => {
-    toast.success("Your order has been placed successfully!");
-    handlePaymentSuccess();
+  const handlePointsApplied = (points: number, discount: number) => {
+    setPointsApplied(points);
+    setDiscountAmount(discount);
+    toast.success(`Applied ${points} points for a $${discount.toFixed(2)} discount!`);
   };
+
+  const finalTotal = Math.max(0, totalPrice + 3.99 - discountAmount).toFixed(2);
 
   const CartTrigger = ({ children }: { children: React.ReactNode }) => (
     <Button 
@@ -147,11 +215,30 @@ export const Cart = () => {
             <span className="text-sm text-brunch-600">Delivery Fee</span>
             <span className="font-medium">$3.99</span>
           </div>
+          
+          {discountAmount > 0 && (
+            <div className="flex items-center justify-between mb-2 text-green-600">
+              <span className="text-sm font-medium flex items-center">
+                <Coin className="h-4 w-4 mr-1" /> Points Discount
+              </span>
+              <span className="font-medium">-${discountAmount.toFixed(2)}</span>
+            </div>
+          )}
+          
           <Separator />
           <div className="flex items-center justify-between">
             <span className="font-medium text-brunch-900">Total</span>
-            <span className="font-bold text-brunch-900">${(totalPrice + 3.99).toFixed(2)}</span>
+            <span className="font-bold text-brunch-900">${finalTotal}</span>
           </div>
+          
+          {user && (
+            <div className="mt-4">
+              <PointsRedemptionForm 
+                totalAmount={totalPrice + 3.99}
+                onPointsApplied={handlePointsApplied}
+              />
+            </div>
+          )}
         </div>
       )}
       <div className="flex flex-col space-y-2 mt-4">
@@ -244,6 +331,13 @@ export const Cart = () => {
     </div>
   );
 
+  const OrderSpin = () => (
+    <div className="flex flex-col items-center py-4 text-center">
+      <h3 className="text-xl font-medium text-brunch-900 mb-6">Spin to Win Loyalty Points!</h3>
+      <SpinningWheel onComplete={handleSpinComplete} />
+    </div>
+  );
+
   const OrderConfirmation = () => (
     <div className="flex flex-col items-center justify-center py-8 text-center">
       <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
@@ -278,6 +372,8 @@ export const Cart = () => {
         );
       case 'payment':
         return <PaymentOptions />;
+      case 'spin':
+        return <OrderSpin />;
       case 'confirmation':
         return <OrderConfirmation />;
       default:

@@ -9,6 +9,7 @@ import Menu from "./pages/Menu";
 import About from "./pages/About";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import LoyaltyPoints from "./pages/LoyaltyPoints";
 import { CartProvider } from "./contexts/CartContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./contexts/AuthContext";
@@ -68,6 +69,7 @@ const AppContent = () => {
         <Route path="/menu" element={<Menu />} />
         <Route path="/about" element={<About />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/loyalty" element={<LoyaltyPoints />} />
         
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>

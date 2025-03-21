@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
-import { X, Minus, Plus, ShoppingCart, CreditCard, Trash2 } from 'lucide-react';
+import { X, Minus, Plus, ShoppingCart, CreditCard, Trash2, TruckIcon, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -19,19 +20,52 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Separator } from '@/components/ui/separator';
 import { PaymentForm } from '@/components/PaymentForm';
+import { DeliveryForm, DeliveryFormData } from '@/components/DeliveryForm';
+import { toast } from 'sonner';
+
+type CheckoutStep = 'cart' | 'delivery' | 'payment' | 'confirmation';
+type PaymentMethod = 'credit' | 'cash';
 
 export const Cart = () => {
   const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart();
   const [open, setOpen] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
+  const [deliveryInfo, setDeliveryInfo] = useState<DeliveryFormData | null>(null);
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('cart');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit');
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const handleCheckout = () => {
     if (items.length === 0) return;
-    setShowPayment(true);
+    setCheckoutStep('delivery');
+  };
+
+  const handleDeliverySubmit = (data: DeliveryFormData) => {
+    setDeliveryInfo(data);
+    setCheckoutStep('payment');
+  };
+
+  const handlePaymentSuccess = () => {
+    setCheckoutStep('confirmation');
+    setTimeout(() => {
+      clearCart();
+      setOpen(false);
+      setCheckoutStep('cart');
+      setDeliveryInfo(null);
+    }, 3000);
+  };
+
+  const handleCashPayment = () => {
+    toast.success("Your order has been placed successfully!");
+    handlePaymentSuccess();
   };
 
   const CartTrigger = ({ children }: { children: React.ReactNode }) => (
@@ -126,8 +160,7 @@ export const Cart = () => {
           disabled={items.length === 0}
           className="bg-brunch-500 hover:bg-brunch-600 text-white"
         >
-          <CreditCard className="mr-2 h-4 w-4" />
-          Proceed to Payment
+          Proceed to Checkout
         </Button>
         {items.length > 0 && (
           <Button 
@@ -143,6 +176,120 @@ export const Cart = () => {
     </>
   );
 
+  const PaymentOptions = () => (
+    <div className="flex flex-col space-y-6">
+      <Button 
+        variant="ghost" 
+        className="mb-2" 
+        onClick={() => setCheckoutStep('delivery')}
+      >
+        <X className="h-4 w-4 mr-2" /> Back to delivery
+      </Button>
+      
+      <h3 className="text-lg font-medium">Select Payment Method</h3>
+      
+      <Tabs defaultValue="credit" onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}>
+        <TabsList className="grid grid-cols-2 mb-4">
+          <TabsTrigger value="credit">Credit Card</TabsTrigger>
+          <TabsTrigger value="cash">Cash on Delivery</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="credit">
+          <PaymentForm
+            totalAmount={(totalPrice + 3.99).toFixed(2)}
+            onSuccess={handlePaymentSuccess}
+          />
+        </TabsContent>
+        
+        <TabsContent value="cash">
+          <div className="space-y-4">
+            <div className="bg-brunch-50 p-4 rounded-md">
+              <h4 className="font-medium mb-2 flex items-center">
+                <TruckIcon className="h-4 w-4 mr-2" />
+                Cash on Delivery
+              </h4>
+              <p className="text-sm text-brunch-600">
+                Pay with cash when your order is delivered to your doorstep.
+              </p>
+            </div>
+            
+            <div className="py-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-brunch-600">Total Amount:</span>
+                <span className="font-bold">${(totalPrice + 3.99).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-brunch-600">Delivery Address:</span>
+              </div>
+              <div className="bg-brunch-50 p-3 rounded text-sm">
+                <p><strong>{deliveryInfo?.fullName}</strong></p>
+                <p>{deliveryInfo?.address}</p>
+                <p>{deliveryInfo?.city}, {deliveryInfo?.postalCode}</p>
+                <p>Phone: {deliveryInfo?.phone}</p>
+                {deliveryInfo?.notes && (
+                  <p className="mt-2"><strong>Notes:</strong> {deliveryInfo.notes}</p>
+                )}
+              </div>
+            </div>
+            
+            <Button
+              onClick={handleCashPayment}
+              className="w-full bg-brunch-500 hover:bg-brunch-600 text-white"
+            >
+              Place Order
+            </Button>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+
+  const OrderConfirmation = () => (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+        <Check className="h-8 w-8 text-green-600" />
+      </div>
+      <h3 className="text-xl font-medium text-brunch-900 mb-2">Order Placed Successfully!</h3>
+      <p className="text-sm text-brunch-600 mb-4">Thank you for your order</p>
+      {paymentMethod === 'cash' && (
+        <div className="bg-brunch-50 p-3 rounded-md text-sm text-left w-full mt-4">
+          <p className="font-medium">Please have the exact change ready:</p>
+          <p className="font-bold text-lg">${(totalPrice + 3.99).toFixed(2)}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStepContent = () => {
+    switch (checkoutStep) {
+      case 'delivery':
+        return (
+          <>
+            <Button 
+              variant="ghost" 
+              className="mb-4" 
+              onClick={() => setCheckoutStep('cart')}
+            >
+              <X className="h-4 w-4 mr-2" /> Back to cart
+            </Button>
+            <h3 className="text-lg font-medium mb-4">Delivery Information</h3>
+            <DeliveryForm onSubmit={handleDeliverySubmit} />
+          </>
+        );
+      case 'payment':
+        return <PaymentOptions />;
+      case 'confirmation':
+        return <OrderConfirmation />;
+      default:
+        return (
+          <>
+            <CartItems />
+            <CartFooter />
+          </>
+        );
+    }
+  };
+
   if (isDesktop) {
     return (
       <Sheet open={open} onOpenChange={setOpen}>
@@ -155,38 +302,13 @@ export const Cart = () => {
           <SheetHeader>
             <SheetTitle className="flex items-center">
               <ShoppingCart className="h-5 w-5 mr-2" />
-              Your Order {totalItems > 0 && `(${totalItems})`}
+              {checkoutStep === 'cart' ? `Your Order ${totalItems > 0 ? `(${totalItems})` : ''}` : 'Checkout'}
             </SheetTitle>
           </SheetHeader>
           
-          {!showPayment ? (
-            <>
-              <div className="flex-1 overflow-auto">
-                <CartItems />
-              </div>
-              <SheetFooter className="sm:justify-start mt-auto pt-2">
-                <CartFooter />
-              </SheetFooter>
-            </>
-          ) : (
-            <div className="flex-1 overflow-auto">
-              <Button 
-                variant="ghost" 
-                className="mb-4" 
-                onClick={() => setShowPayment(false)}
-              >
-                <X className="h-4 w-4 mr-2" /> Back to cart
-              </Button>
-              <PaymentForm 
-                totalAmount={(totalPrice + 3.99).toFixed(2)} 
-                onSuccess={() => {
-                  clearCart();
-                  setShowPayment(false);
-                  setOpen(false);
-                }}
-              />
-            </div>
-          )}
+          <div className="flex-1 overflow-auto">
+            {renderStepContent()}
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -204,40 +326,20 @@ export const Cart = () => {
           <DrawerHeader className="text-left">
             <DrawerTitle className="flex items-center">
               <ShoppingCart className="h-5 w-5 mr-2" />
-              Your Order {totalItems > 0 && `(${totalItems})`}
+              {checkoutStep === 'cart' ? `Your Order ${totalItems > 0 ? `(${totalItems})` : ''}` : 'Checkout'}
             </DrawerTitle>
           </DrawerHeader>
           
-          {!showPayment ? (
-            <>
-              <div className="px-4">
-                <CartItems />
-              </div>
-              <DrawerFooter>
-                <CartFooter />
-                <DrawerClose asChild>
-                  <Button variant="outline">Cancel</Button>
-                </DrawerClose>
-              </DrawerFooter>
-            </>
-          ) : (
-            <div className="px-4 pb-8">
-              <Button 
-                variant="ghost" 
-                className="mb-4" 
-                onClick={() => setShowPayment(false)}
-              >
-                <X className="h-4 w-4 mr-2" /> Back to cart
-              </Button>
-              <PaymentForm 
-                totalAmount={(totalPrice + 3.99).toFixed(2)} 
-                onSuccess={() => {
-                  clearCart();
-                  setShowPayment(false);
-                  setOpen(false);
-                }}
-              />
-            </div>
+          <div className="px-4 pb-8">
+            {renderStepContent()}
+          </div>
+          
+          {checkoutStep === 'cart' && (
+            <DrawerFooter>
+              <DrawerClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DrawerClose>
+            </DrawerFooter>
           )}
         </DrawerContent>
       </Drawer>

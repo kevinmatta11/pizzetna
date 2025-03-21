@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Flame } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import Header from '@/components/Header';
+import { toast } from "sonner";
 
 interface MenuItem {
   id: string;
@@ -68,14 +71,20 @@ export default function Menu() {
   }, []);
 
   const addToCart = (menuItem: MenuItem) => {
-    const item = {
-      id: menuItem.id, // This is already a string from Supabase
-      name: menuItem.name,
-      price: menuItem.price,
-      imageSrc: menuItem.image_url || '/placeholder.svg',
-    };
-    
-    cart.addItem(item);
+    try {
+      const item = {
+        id: menuItem.id,
+        name: menuItem.name,
+        price: menuItem.price,
+        imageSrc: menuItem.image_url || '/placeholder.svg',
+      };
+      
+      cart.addItem(item);
+      toast.success(`Added ${menuItem.name} to cart`);
+    } catch (error) {
+      console.error('Error adding item to cart:', error);
+      toast.error('Failed to add item to cart');
+    }
   };
 
   const getSpicyLevelIcon = (level: string | null) => {
@@ -104,104 +113,107 @@ export default function Menu() {
     : menuItems;
 
   return (
-    <div className="container mx-auto py-8">
-      <PageHeader
-        title="Our Menu"
-        description="Explore our delicious selection of pizzas and more"
-      />
+    <>
+      <Header />
+      <div className="container mx-auto pt-24 pb-8">
+        <PageHeader
+          title="Our Menu"
+          description="Explore our delicious selection of pizzas and more"
+        />
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-          {Array(6).fill(0).map((_, i) => (
-            <Card key={i} className="overflow-hidden">
-              <Skeleton className="h-48 w-full" />
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-2/3" />
-              </CardContent>
-              <CardFooter>
-                <Skeleton className="h-10 w-full" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <>
-          <Tabs 
-            defaultValue={categories[0]?.id} 
-            value={activeCategory || undefined}
-            onValueChange={setActiveCategory}
-            className="mt-8"
-          >
-            <TabsList className="mb-8 flex flex-wrap">
-              {categories.map((category) => (
-                <TabsTrigger key={category.id} value={category.id}>
-                  {category.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
-            {categories.map((category) => (
-              <TabsContent key={category.id} value={category.id}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredItems.map((item) => (
-                    <Card key={item.id} className="overflow-hidden">
-                      <div className="h-48 w-full overflow-hidden bg-brunch-100">
-                        {item.image_url ? (
-                          <img 
-                            src={item.image_url} 
-                            alt={item.name} 
-                            className="h-full w-full object-cover transition-transform hover:scale-105"
-                          />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center bg-brunch-100 text-brunch-400">
-                            No image available
-                          </div>
-                        )}
-                      </div>
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <CardTitle className="text-xl">{item.name}</CardTitle>
-                          <Badge variant="outline" className="font-bold text-brunch-700">
-                            ${item.price.toFixed(2)}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          {item.preparation_time && (
-                            <Badge variant="secondary" className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {item.preparation_time}
-                            </Badge>
-                          )}
-                          {item.spicy_level && (
-                            <Badge variant="secondary" className="flex items-center gap-1">
-                              {getSpicyLevelIcon(item.spicy_level)}
-                            </Badge>
-                          )}
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-brunch-600">{item.description}</p>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          onClick={() => addToCart(item)} 
-                          className="w-full bg-brunch-500 hover:bg-brunch-600"
-                        >
-                          Add to Cart
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            {Array(6).fill(0).map((_, i) => (
+              <Card key={i} className="overflow-hidden">
+                <Skeleton className="h-48 w-full" />
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-2/3" />
+                </CardContent>
+                <CardFooter>
+                  <Skeleton className="h-10 w-full" />
+                </CardFooter>
+              </Card>
             ))}
-          </Tabs>
-        </>
-      )}
-    </div>
+          </div>
+        ) : (
+          <>
+            <Tabs 
+              defaultValue={categories[0]?.id} 
+              value={activeCategory || undefined}
+              onValueChange={setActiveCategory}
+              className="mt-8"
+            >
+              <TabsList className="mb-8 flex flex-wrap">
+                {categories.map((category) => (
+                  <TabsTrigger key={category.id} value={category.id}>
+                    {category.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {categories.map((category) => (
+                <TabsContent key={category.id} value={category.id}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredItems.map((item) => (
+                      <Card key={item.id} className="overflow-hidden">
+                        <div className="h-48 w-full overflow-hidden bg-brunch-100">
+                          {item.image_url ? (
+                            <img 
+                              src={item.image_url} 
+                              alt={item.name} 
+                              className="h-full w-full object-cover transition-transform hover:scale-105"
+                            />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center bg-brunch-100 text-brunch-400">
+                              No image available
+                            </div>
+                          )}
+                        </div>
+                        <CardHeader>
+                          <div className="flex justify-between items-start">
+                            <CardTitle className="text-xl">{item.name}</CardTitle>
+                            <Badge variant="outline" className="font-bold text-brunch-700">
+                              ${item.price.toFixed(2)}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            {item.preparation_time && (
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {item.preparation_time}
+                              </Badge>
+                            )}
+                            {item.spicy_level && (
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                {getSpicyLevelIcon(item.spicy_level)}
+                              </Badge>
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-brunch-600">{item.description}</p>
+                        </CardContent>
+                        <CardFooter>
+                          <Button 
+                            onClick={() => addToCart(item)} 
+                            className="w-full bg-brunch-500 hover:bg-brunch-600"
+                          >
+                            Add to Cart
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </>
+        )}
+      </div>
+    </>
   );
 }

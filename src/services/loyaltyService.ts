@@ -1,14 +1,15 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // Types
+export type TransactionType = 'earned' | 'redeemed';
+
 export interface LoyaltyTransaction {
   id: string;
   user_id: string;
   amount: number;
-  transaction_type: 'earned' | 'redeemed';
-  description: string | null;
+  transaction_type: TransactionType;
+  description: string;
   order_id: string | null;
   created_at: string;
 }
@@ -38,25 +39,24 @@ export const loyaltyService = {
   // Get transaction history
   async getTransactionHistory(): Promise<LoyaltyTransaction[]> {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return [];
-      
       const { data, error } = await supabase
         .from('loyalty_transactions')
         .select('*')
-        .eq('user_id', user.user.id)
         .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Explicitly cast the data to ensure the transaction_type is correct
-      return (data || []).map(item => ({
-        ...item,
-        transaction_type: item.transaction_type as 'earned' | 'redeemed'
+
+      if (error) {
+        console.error("Error fetching transaction history:", error);
+        throw error;
+      }
+
+      // Cast the transaction_type to the correct type
+      return data.map(transaction => ({
+        ...transaction,
+        transaction_type: transaction.transaction_type as TransactionType
       }));
     } catch (error) {
-      console.error("Error fetching transaction history:", error);
-      return [];
+      console.error("Error in getTransactionHistory:", error);
+      throw error;
     }
   },
   

@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 
 // Define the pizza item type
 export interface CartItem {
-  id: number;
+  id: string; // Change this to string to ensure compatibility with Supabase UUIDs
   name: string;
   price: number;
   quantity: number;
@@ -15,8 +15,8 @@ export interface CartItem {
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
-  removeItem: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -56,7 +56,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Remove item from cart
-  const removeItem = (id: number) => {
+  const removeItem = (id: string) => {
     setItems(prevItems => {
       const itemToRemove = prevItems.find(item => item.id === id);
       if (itemToRemove) {
@@ -70,7 +70,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Update item quantity
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) {
       removeItem(id);
       return;

@@ -1,216 +1,207 @@
-
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useCart } from '@/contexts/CartContext';
-import { Pizza, Utensils, Clock, Flame, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Clock, Flame } from 'lucide-react';
+import { PageHeader } from '@/components/PageHeader';
 
-type MenuItem = {
+interface MenuItem {
   id: string;
   name: string;
-  description: string | null;
+  description: string;
   price: number;
-  category_name: string;
-  preparation_time: string | null;
-  spicy_level: string | null;
-  image_url: string | null;
-};
+  image_url: string;
+  category_id: string;
+  preparation_time: string;
+  spicy_level: string;
+}
 
-const Menu = () => {
-  const { addItem } = useCart();
-  const navigate = useNavigate();
+interface Category {
+  id: string;
+  name: string;
+}
+
+export default function Menu() {
+  const cart = useCart();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchMenuItems = async () => {
+    async function fetchData() {
       try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from("menu_items")
-          .select(`
-            *,
-            categories:category_id (name)
-          `)
+        // Fetch categories
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('*')
           .order('name');
 
-        if (error) throw error;
-        
-        const formattedMenuItems = data.map((item: any) => ({
-          ...item,
-          category_name: item.categories?.name || "Uncategorized"
-        }));
+        if (categoriesError) throw categoriesError;
+        setCategories(categoriesData || []);
 
-        setMenuItems(formattedMenuItems || []);
-      } catch (err: any) {
-        console.error("Error fetching menu items:", err);
-        setError("Failed to load menu items. Please try again later.");
-        toast.error("Failed to load menu items");
+        // Set active category to first one if available
+        if (categoriesData && categoriesData.length > 0) {
+          setActiveCategory(categoriesData[0].id);
+        }
+
+        // Fetch menu items
+        const { data: menuItemsData, error: menuItemsError } = await supabase
+          .from('menu_items')
+          .select('*')
+          .order('name');
+
+        if (menuItemsError) throw menuItemsError;
+        setMenuItems(menuItemsData || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
-    };
+    }
 
-    fetchMenuItems();
+    fetchData();
   }, []);
 
-  const handleAddToCart = (item: MenuItem) => {
-    addItem({
-      id: parseInt(item.id), // Convert string to number
-      name: item.name,
-      price: item.price,
-      imageSrc: item.image_url || "/placeholder.svg"
-    });
+  const addToCart = (menuItem: MenuItem) => {
+    const item = {
+      id: menuItem.id, // This is already a string from Supabase
+      name: menuItem.name,
+      price: menuItem.price,
+      imageSrc: menuItem.image_url || '/placeholder.svg',
+    };
+    
+    cart.addItem(item);
   };
 
-  const renderSkeletons = () => {
-    return Array(6).fill(0).map((_, index) => (
-      <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
-        <Skeleton className="w-full h-48" />
-        <div className="p-6">
-          <Skeleton className="h-6 w-3/4 mb-2" />
-          <Skeleton className="h-4 w-full mb-4" />
-          <div className="flex items-center gap-4 mb-4">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-16" />
-          </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
-          </div>
-        </div>
-      </div>
+  const getSpicyLevelIcon = (level: string | null) => {
+    if (!level) return null;
+    
+    const spicyLevels: Record<string, { color: string, count: number }> = {
+      'mild': { color: 'yellow', count: 1 },
+      'medium': { color: 'orange', count: 2 },
+      'hot': { color: 'red', count: 3 },
+    };
+    
+    const spicyInfo = spicyLevels[level.toLowerCase()];
+    if (!spicyInfo) return null;
+    
+    return Array(spicyInfo.count).fill(0).map((_, i) => (
+      <Flame 
+        key={i} 
+        className={`h-4 w-4 text-${spicyInfo.color}-500`} 
+        fill={`${spicyInfo.color}`}
+      />
     ));
   };
 
+  const filteredItems = activeCategory 
+    ? menuItems.filter(item => item.category_id === activeCategory)
+    : menuItems;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brunch-50/50 to-white">
-      <Header />
-      <div className="container mx-auto px-4 py-8">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/')}
-          className="mb-8 hover:bg-brunch-100"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Home
-        </Button>
+    <div className="container mx-auto py-8">
+      <PageHeader
+        title="Our Menu"
+        description="Explore our delicious selection of pizzas and more"
+      />
 
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-display font-bold text-brunch-900 mb-4">Our Menu</h1>
-          <p className="text-brunch-700 max-w-2xl mx-auto">
-            Discover our selection of handcrafted pizzas made with love and the finest ingredients
-          </p>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+          {Array(6).fill(0).map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <Skeleton className="h-48 w-full" />
+              <CardHeader>
+                <Skeleton className="h-6 w-3/4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+              <CardFooter>
+                <Skeleton className="h-10 w-full" />
+              </CardFooter>
+            </Card>
+          ))}
         </div>
+      ) : (
+        <>
+          <Tabs 
+            defaultValue={categories[0]?.id} 
+            value={activeCategory || undefined}
+            onValueChange={setActiveCategory}
+            className="mt-8"
+          >
+            <TabsList className="mb-8 flex flex-wrap">
+              {categories.map((category) => (
+                <TabsTrigger key={category.id} value={category.id}>
+                  {category.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-        {error && (
-          <div className="text-center p-8 bg-red-50 rounded-lg mb-8">
-            <p className="text-red-600">{error}</p>
-            <Button 
-              onClick={() => window.location.reload()} 
-              className="mt-4"
-              variant="outline"
-            >
-              Try Again
-            </Button>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading ? (
-            renderSkeletons()
-          ) : menuItems.length === 0 ? (
-            <div className="col-span-full text-center p-8 bg-brunch-50 rounded-lg">
-              <p className="text-brunch-700">No menu items available at the moment.</p>
-              <p className="text-brunch-500 mt-2">Please check back later or contact us for today's specials!</p>
-            </div>
-          ) : (
-            menuItems.map((item) => (
-              <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                <img
-                  src={item.image_url || "/placeholder.svg"}
-                  alt={item.name}
-                  className="w-full h-48 object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/placeholder.svg";
-                  }}
-                />
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-brunch-900 mb-2">{item.name}</h3>
-                      <p className="text-brunch-700 text-sm mb-4">{item.description || "No description available"}</p>
-                    </div>
-                    <span className="text-xl font-bold text-brunch-500">${parseFloat(item.price.toString()).toFixed(2)}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-brunch-600 mb-4">
-                    <div className="flex items-center gap-1">
-                      <Utensils className="h-4 w-4" />
-                      <span>{item.category_name}</span>
-                    </div>
-                    {item.preparation_time && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        <span>{item.preparation_time}</span>
-                      </div>
-                    )}
-                    {item.spicy_level && (
-                      <div className="flex items-center gap-1">
-                        <Flame className="h-4 w-4" />
-                        <span>{item.spicy_level}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline">View Details</Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <div className="p-6">
-                          <h2 className="text-2xl font-semibold mb-4">{item.name}</h2>
-                          <img
-                            src={item.image_url || "/placeholder.svg"}
-                            alt={item.name}
-                            className="w-full h-64 object-cover rounded-lg mb-4"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "/placeholder.svg";
-                            }}
+            {categories.map((category) => (
+              <TabsContent key={category.id} value={category.id}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredItems.map((item) => (
+                    <Card key={item.id} className="overflow-hidden">
+                      <div className="h-48 w-full overflow-hidden bg-brunch-100">
+                        {item.image_url ? (
+                          <img 
+                            src={item.image_url} 
+                            alt={item.name} 
+                            className="h-full w-full object-cover transition-transform hover:scale-105"
                           />
-                          <p className="text-brunch-700 mb-4">{item.description || "No description available"}</p>
-                          <div className="space-y-2">
-                            <p><strong>Category:</strong> {item.category_name}</p>
-                            {item.preparation_time && <p><strong>Preparation Time:</strong> {item.preparation_time}</p>}
-                            {item.spicy_level && <p><strong>Spicy Level:</strong> {item.spicy_level}</p>}
-                            <p><strong>Price:</strong> ${parseFloat(item.price.toString()).toFixed(2)}</p>
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center bg-brunch-100 text-brunch-400">
+                            No image available
                           </div>
+                        )}
+                      </div>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <CardTitle className="text-xl">{item.name}</CardTitle>
+                          <Badge variant="outline" className="font-bold text-brunch-700">
+                            ${item.price.toFixed(2)}
+                          </Badge>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                    <Button 
-                      onClick={() => handleAddToCart(item)}
-                      className="bg-brunch-500 hover:bg-brunch-600 text-white"
-                    >
-                      Add to Order
-                    </Button>
-                  </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          {item.preparation_time && (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {item.preparation_time}
+                            </Badge>
+                          )}
+                          {item.spicy_level && (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              {getSpicyLevelIcon(item.spicy_level)}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-brunch-600">{item.description}</p>
+                      </CardContent>
+                      <CardFooter>
+                        <Button 
+                          onClick={() => addToCart(item)} 
+                          className="w-full bg-brunch-500 hover:bg-brunch-600"
+                        >
+                          Add to Cart
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </>
+      )}
     </div>
   );
-};
-
-export default Menu;
+}

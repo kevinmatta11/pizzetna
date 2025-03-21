@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -89,22 +88,25 @@ export const Cart = () => {
       const newOrderId = orderData.id;
       setOrderId(newOrderId);
       
-      // Convert menu_item_id to string for all order items
       const orderItems = items.map(item => ({
         order_id: newOrderId,
         price: item.price,
         quantity: item.quantity,
-        menu_item_id: item.id.toString() // Convert id to string
+        menu_item_id: item.id.toString()
       }));
       
-      // Insert order items as an array
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+      console.log("Submitting order items:", orderItems);
       
-      if (itemsError) {
-        console.error("Order items error:", itemsError);
-        throw itemsError;
+      for (const item of orderItems) {
+        const { error: itemError } = await supabase
+          .from('order_items')
+          .insert(item);
+        
+        if (itemError) {
+          console.error("Order item error:", itemError);
+          console.error("Problematic item:", item);
+          throw itemError;
+        }
       }
       
       if (pointsApplied > 0) {
@@ -112,12 +114,10 @@ export const Cart = () => {
       }
       
       toast.success("Your order has been placed successfully!");
-      // Always proceed to spin step if order is successful
       setCheckoutStep('spin');
     } catch (error) {
       console.error("Error creating order:", error);
       toast.error("There was a problem with your order. Please try again.");
-      // Do not change to confirmation on error, stay at payment
       setCheckoutStep('payment');
     }
   };

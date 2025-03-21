@@ -14,9 +14,9 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Coin, Gift, History, Trophy, InfoIcon } from 'lucide-react';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+import { Coins, Gift, History, Trophy, InfoIcon } from 'lucide-react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 const LoyaltyPoints = () => {
   const { user, isLoading: authLoading } = useAuth();
@@ -94,7 +94,7 @@ const LoyaltyPoints = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Coin className="h-5 w-5 mr-2 text-brunch-500" />
+                  <Coins className="h-5 w-5 mr-2 text-brunch-500" />
                   Your Points Balance
                 </CardTitle>
                 <CardDescription>

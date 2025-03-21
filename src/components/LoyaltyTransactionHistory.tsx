@@ -11,7 +11,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Coin, ArrowUp, ArrowDown } from 'lucide-react';
+import { Coins, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface LoyaltyTransactionHistoryProps {
   transactions: LoyaltyTransaction[];
@@ -33,7 +33,7 @@ export const LoyaltyTransactionHistory: React.FC<LoyaltyTransactionHistoryProps>
   if (!transactions.length) {
     return (
       <div className="p-8 text-center">
-        <Coin className="h-12 w-12 text-brunch-300 mx-auto mb-4" />
+        <Coins className="h-12 w-12 text-brunch-300 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-brunch-700 mb-2">No transaction history</h3>
         <p className="text-sm text-brunch-500">Complete an order to start earning points!</p>
       </div>

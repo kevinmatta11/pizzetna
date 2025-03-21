@@ -48,7 +48,12 @@ export const loyaltyService = {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      
+      // Explicitly cast the data to ensure the transaction_type is correct
+      return (data || []).map(item => ({
+        ...item,
+        transaction_type: item.transaction_type as 'earned' | 'redeemed'
+      }));
     } catch (error) {
       console.error("Error fetching transaction history:", error);
       return [];

@@ -62,7 +62,7 @@ const Menu = () => {
 
   const handleAddToCart = (item: MenuItem) => {
     addItem({
-      id: item.id,
+      id: parseInt(item.id), // Convert string to number
       name: item.name,
       price: item.price,
       imageSrc: item.image_url || "/placeholder.svg"

@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { X, Minus, Plus, ShoppingCart, CreditCard, Trash2, TruckIcon, Check, Coin } from 'lucide-react';
+import { X, Minus, Plus, ShoppingCart, CreditCard, Trash2, TruckIcon, Check, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -89,7 +90,7 @@ export const Cart = () => {
         order_id: newOrderId,
         price: item.price,
         quantity: item.quantity,
-        menu_item_id: item.id
+        menu_item_id: item.id.toString() // Convert id to string
       }));
       
       const { error: itemsError } = await supabase
@@ -219,7 +220,7 @@ export const Cart = () => {
           {discountAmount > 0 && (
             <div className="flex items-center justify-between mb-2 text-green-600">
               <span className="text-sm font-medium flex items-center">
-                <Coin className="h-4 w-4 mr-1" /> Points Discount
+                <Coins className="h-4 w-4 mr-1" /> Points Discount
               </span>
               <span className="font-medium">-${discountAmount.toFixed(2)}</span>
             </div>

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { loyaltyService } from '@/services/loyaltyService';
 import { useAuth } from '@/contexts/AuthContext';
-import { Coin } from 'lucide-react';
+import { Coins } from 'lucide-react';
 
 interface PointsRedemptionFormProps {
   totalAmount: number;
@@ -79,7 +79,7 @@ export const PointsRedemptionForm: React.FC<PointsRedemptionFormProps> = ({
     return (
       <div className="p-4 bg-brunch-50 rounded-md">
         <p className="text-sm text-brunch-600 flex items-center">
-          <Coin className="h-4 w-4 mr-2 text-brunch-400" />
+          <Coins className="h-4 w-4 mr-2 text-brunch-400" />
           You don't have any loyalty points to redeem yet.
         </p>
       </div>

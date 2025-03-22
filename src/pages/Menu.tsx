@@ -117,7 +117,7 @@ export default function Menu() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <div className="container mx-auto py-24 flex-grow">
+      <div className="container mx-auto py-16 md:py-24 px-4 flex-grow">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-brunch-800">Our Menu</h1>
           <p className="text-brunch-600 mt-2">Explore our delicious selection of pizzas and more</p>

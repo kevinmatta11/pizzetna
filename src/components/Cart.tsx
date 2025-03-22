@@ -64,6 +64,7 @@ export const Cart = () => {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [showSpinDialog, setShowSpinDialog] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const handleCheckout = () => {
@@ -78,25 +79,30 @@ export const Cart = () => {
 
   const handlePaymentSuccess = async () => {
     try {
+      setIsProcessing(true);
       const finalAmount = Math.max(0, totalPrice + 3.99 - discountAmount);
       
-      // Create order for both logged in and non-logged in users
+      console.log("Creating order with amount:", finalAmount);
+      
+      // Create order without RLS
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: user?.id || null, // Allow null for non-logged in users
           total_amount: finalAmount,
-          status: 'paid'
+          status: 'pending'
         })
         .select('id')
         .single();
       
       if (orderError) {
-        console.error("Order error:", orderError);
+        console.error("Order creation error:", orderError);
+        toast.error(`Order error: ${orderError.message}`);
         throw orderError;
       }
       
       const newOrderId = orderData.id;
+      console.log("Order created with ID:", newOrderId);
       setOrderId(newOrderId);
       
       // Create order items
@@ -112,6 +118,7 @@ export const Cart = () => {
         
         if (itemError) {
           console.error("Order item error:", itemError);
+          toast.error(`Item error: ${itemError.message}`);
           throw itemError;
         }
       }
@@ -152,10 +159,11 @@ export const Cart = () => {
           setShowLoginPrompt(true);
         }, 1500);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating order:", error);
-      toast.error("There was a problem with your order. Please try again.");
-      setCheckoutStep('payment');
+      toast.error(`There was a problem with your order: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -216,11 +224,13 @@ export const Cart = () => {
 
   const finalTotal = Math.max(0, totalPrice + 3.99 - discountAmount).toFixed(2);
 
-  const CartTrigger = ({ children }: { children: React.ReactNode }) => (
+  // Fix: Correctly implement CartTrigger using React.forwardRef
+  const CartTrigger = React.forwardRef<HTMLButtonElement, { children?: React.ReactNode }>((props, ref) => (
     <Button 
       variant="outline" 
       className="relative p-2 bg-white border-brunch-200"
       onClick={() => setOpen(true)}
+      ref={ref}
     >
       <ShoppingCart className="h-5 w-5 text-brunch-700" />
       {totalItems > 0 && (
@@ -228,9 +238,11 @@ export const Cart = () => {
           {totalItems}
         </span>
       )}
-      {children}
+      {props.children}
     </Button>
-  );
+  ));
+  
+  CartTrigger.displayName = 'CartTrigger';
 
   // Cart Items Component
   const CartItems = () => (
@@ -381,10 +393,17 @@ export const Cart = () => {
               </TabsList>
               
               <TabsContent value="credit">
-                <PaymentForm
-                  totalAmount={finalTotal}
-                  onSuccess={handlePaymentSuccess}
-                />
+                {isProcessing ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin h-8 w-8 border-4 border-brunch-500 border-t-transparent rounded-full"></div>
+                    <span className="ml-3">Processing payment...</span>
+                  </div>
+                ) : (
+                  <PaymentForm
+                    totalAmount={parseFloat(finalTotal)}
+                    onSuccess={handlePaymentSuccess}
+                  />
+                )}
               </TabsContent>
               
               <TabsContent value="cash">
@@ -421,8 +440,16 @@ export const Cart = () => {
                   <Button
                     onClick={handleCashPayment}
                     className="w-full bg-brunch-500 hover:bg-brunch-600 text-white"
+                    disabled={isProcessing}
                   >
-                    Place Order
+                    {isProcessing ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin h-4 w-4 mr-2 border-2 border-t-transparent rounded-full"></span>
+                        Processing...
+                      </span>
+                    ) : (
+                      'Place Order'
+                    )}
                   </Button>
                 </div>
               </TabsContent>
@@ -472,7 +499,7 @@ export const Cart = () => {
               {totalItems > 0 && <span className="sr-only">Open cart ({totalItems} items)</span>}
             </CartTrigger>
           </SheetTrigger>
-          <SheetContent className="w-[350px] sm:w-[450px] flex flex-col">
+          <SheetContent className="w-[350px] sm:w-[450px] flex flex-col overflow-hidden">
             <SheetHeader>
               <SheetTitle className="flex items-center">
                 <ShoppingCart className="h-5 w-5 mr-2" />
@@ -530,7 +557,7 @@ export const Cart = () => {
             {totalItems > 0 && <span className="sr-only">Open cart ({totalItems} items)</span>}
           </CartTrigger>
         </DrawerTrigger>
-        <DrawerContent className="px-4">
+        <DrawerContent className="px-4 max-h-[85vh]">
           <DrawerHeader className="text-left">
             <DrawerTitle className="flex items-center">
               <ShoppingCart className="h-5 w-5 mr-2" />
@@ -538,7 +565,7 @@ export const Cart = () => {
             </DrawerTitle>
           </DrawerHeader>
           
-          <div className="px-4 pb-8 max-h-[calc(100vh-12rem)] overflow-y-auto">
+          <div className="px-4 pb-8 overflow-y-auto">
             {renderStepContent()}
           </div>
           

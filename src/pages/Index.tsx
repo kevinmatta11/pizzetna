@@ -12,7 +12,7 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="pt-32 pb-16 md:pt-40 md:pb-24">
+      <section className="pt-24 pb-16 md:pt-32 md:pb-24 px-4">
         <div className="container">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8 text-center lg:text-left">
@@ -48,7 +48,7 @@ const Index = () => {
       </section>
       
       {/* Popular Items Section */}
-      <section id="popular" className="section-padding bg-brunch-50/30">
+      <section id="popular" className="py-16 md:py-24 px-4 bg-brunch-50/30">
         <div className="container">
           <div className="text-center mb-12">
             <span className="inline-block px-4 py-2 rounded-full bg-brunch-100 text-brunch-700 font-medium text-sm animate-fade-down">
@@ -73,7 +73,7 @@ const Index = () => {
         </div>
       </section>
       
-      {/* Location Section (replacing the Featured Section) */}
+      {/* Location Section */}
       <LocationSection />
       
       {/* Footer */}

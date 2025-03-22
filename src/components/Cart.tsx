@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,6 +59,7 @@ export const Cart = () => {
   const [pointsApplied, setPointsApplied] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const navigate = useNavigate();
 
@@ -85,77 +85,37 @@ export const Cart = () => {
 
   const handlePaymentSuccess = async () => {
     try {
+      setIsProcessing(true);
       const finalAmount = Math.max(0, totalPrice + 3.99 - discountAmount);
       
-      // For anonymous users, create an order without user_id
-      let newOrderId: string;
-      
-      if (user) {
-        // Authenticated user flow
-        console.log("Creating order for authenticated user:", user.id);
-        const { data: orderData, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            user_id: user.id,
-            total_amount: finalAmount,
-            status: 'paid'
-          })
-          .select('id')
-          .single();
-        
-        if (orderError) {
-          console.error("Order error:", orderError);
-          throw orderError;
-        }
-        
-        newOrderId = orderData.id;
-      } else {
-        // Anonymous user flow
-        console.log("Creating anonymous order");
-        const { data: orderData, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            total_amount: finalAmount,
-            status: 'paid'
-          })
-          .select('id')
-          .single();
-        
-        if (orderError) {
-          console.error("Order error:", orderError);
-          throw orderError;
-        }
-        
-        newOrderId = orderData.id;
-      }
-      
-      setOrderId(newOrderId);
-      
+      // Format the cart items for the edge function
       const orderItems = items.map(item => ({
-        order_id: newOrderId,
+        menuItemId: item.id,
         price: item.price,
-        quantity: item.quantity,
-        menu_item_id: item.id.toString()
+        quantity: item.quantity
       }));
       
-      console.log("Submitting order items:", orderItems);
+      console.log("Submitting order with items:", orderItems);
       
-      // Using Promise.all to insert all order items in parallel
-      const itemPromises = orderItems.map(item => 
-        supabase.from('order_items').insert(item)
-      );
+      // Call the edge function to create the order
+      const { data, error } = await supabase.functions.invoke('create-order', {
+        body: {
+          userId: user?.id || null,
+          totalAmount: finalAmount,
+          items: orderItems
+        }
+      });
       
-      const itemResults = await Promise.all(itemPromises);
-      
-      // Check for any errors in the results
-      const itemErrors = itemResults.filter(result => result.error);
-      if (itemErrors.length > 0) {
-        console.error("Order item errors:", itemErrors);
-        throw itemErrors[0].error;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message);
       }
       
+      console.log("Order created successfully:", data);
+      setOrderId(data.orderId);
+      
       if (pointsApplied > 0 && user) {
-        await loyaltyService.redeemPoints(pointsApplied, newOrderId);
+        await loyaltyService.redeemPoints(pointsApplied, data.orderId);
       }
       
       toast.success("Your order has been placed successfully!");
@@ -172,6 +132,8 @@ export const Cart = () => {
       console.error("Error creating order:", error);
       toast.error("There was a problem with your order. Please try again.");
       setCheckoutStep('payment');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -200,21 +162,25 @@ export const Cart = () => {
 
   const finalTotal = Math.max(0, totalPrice + 3.99 - discountAmount).toFixed(2);
 
-  const CartTrigger = ({ children }: { children: React.ReactNode }) => (
-    <Button 
-      variant="outline" 
-      className="relative p-2 bg-white border-brunch-200"
-      onClick={() => setOpen(true)}
-    >
-      <ShoppingCart className="h-5 w-5 text-brunch-700" />
-      {totalItems > 0 && (
-        <span className="absolute -top-2 -right-2 bg-brunch-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-          {totalItems}
-        </span>
-      )}
-      {children}
-    </Button>
+  const CartTrigger = React.forwardRef<HTMLButtonElement, { children: React.ReactNode }>(
+    ({ children }, ref) => (
+      <Button 
+        variant="outline" 
+        className="relative p-2 bg-white border-brunch-200"
+        onClick={() => setOpen(true)}
+        ref={ref}
+      >
+        <ShoppingCart className="h-5 w-5 text-brunch-700" />
+        {totalItems > 0 && (
+          <span className="absolute -top-2 -right-2 bg-brunch-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+            {totalItems}
+          </span>
+        )}
+        {children}
+      </Button>
+    )
   );
+  CartTrigger.displayName = "CartTrigger";
 
   const CartItems = () => (
     <div className="flex flex-col gap-4 py-4 overflow-auto max-h-[50vh]">
@@ -367,7 +333,7 @@ export const Cart = () => {
             <div className="py-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-brunch-600">Total Amount:</span>
-                <span className="font-bold">${(totalPrice + 3.99).toFixed(2)}</span>
+                <span className="font-bold">${finalTotal}</span>
               </div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-brunch-600">Delivery Address:</span>
@@ -385,9 +351,10 @@ export const Cart = () => {
             
             <Button
               onClick={handleCashPayment}
+              disabled={isProcessing}
               className="w-full bg-brunch-500 hover:bg-brunch-600 text-white"
             >
-              Place Order
+              {isProcessing ? "Processing..." : "Place Order"}
             </Button>
           </div>
         </TabsContent>
@@ -455,7 +422,7 @@ export const Cart = () => {
       {paymentMethod === 'cash' && (
         <div className="bg-brunch-50 p-3 rounded-md text-sm text-left w-full mt-4">
           <p className="font-medium">Please have the exact change ready:</p>
-          <p className="font-bold text-lg">${(totalPrice + 3.99).toFixed(2)}</p>
+          <p className="font-bold text-lg">${finalTotal}</p>
         </div>
       )}
     </div>

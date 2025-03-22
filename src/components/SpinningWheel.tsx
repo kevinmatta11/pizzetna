@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -156,17 +155,28 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
                   className="w-full h-full flex items-center justify-center"
                   style={{ backgroundColor: segment.color }}
                 >
-                  {/* Fixed text orientation */}
+                  {/* Improved text positioning */}
                   <div 
-                    className="absolute whitespace-nowrap"
+                    className="absolute"
                     style={{ 
-                      transform: `rotate(${angle / 2}deg) translateY(-130px) rotate(90deg)`,
-                      transformOrigin: 'center'
+                      transform: `rotate(${angle / 2}deg)`,
+                      top: '40px',
+                      left: '150px',
+                      width: '80px',
+                      textAlign: 'center',
+                      transformOrigin: 'center',
                     }}
                   >
-                    <p className="font-bold text-xs text-center text-brunch-800">
+                    <div 
+                      className="font-bold text-xs text-brunch-800"
+                      style={{ 
+                        transform: `rotate(${90 - index * angle}deg)`,
+                        whiteSpace: 'nowrap',
+                        textShadow: '0px 0px 3px white, 0px 0px 3px white',
+                      }}
+                    >
                       {segment.text}
-                    </p>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -4,23 +4,23 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { loyaltyService } from '@/services/loyaltyService';
-import { Trophy, Gift, Coins, RotateCw, Star, Award } from 'lucide-react';
+import { Trophy, Gift, Coins, RotateCw } from 'lucide-react';
 
-// Define segments with better colors and clearer display values
+// Improved segment definitions with better colors
 const segments = [
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: <RotateCw className="h-5 w-5 text-gray-600" /> },
-  { text: '50 Points', value: 50, color: '#FFE7AD', probability: 0.2, icon: <Star className="h-5 w-5 text-yellow-500" /> },
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: <RotateCw className="h-5 w-5 text-gray-600" /> },
-  { text: '100 Points', value: 100, color: '#FFDDA1', probability: 0.2, icon: <Star className="h-6 w-6 text-yellow-600" /> },
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: <RotateCw className="h-5 w-5 text-gray-600" /> },
-  { text: '300 Points', value: 300, color: '#FFC285', probability: 0.1, icon: <Award className="h-6 w-6 text-orange-500" /> },
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: <RotateCw className="h-5 w-5 text-gray-600" /> },
-  { text: '50 Points', value: 50, color: '#FFE7AD', probability: 0.2, icon: <Star className="h-5 w-5 text-yellow-500" /> },
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: <RotateCw className="h-5 w-5 text-gray-600" /> },
-  { text: '100 Points', value: 100, color: '#FFDDA1', probability: 0.2, icon: <Star className="h-6 w-6 text-yellow-600" /> },
+  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: '🎲' },
+  { text: '50 Points', value: 50, color: '#FFE7AD', probability: 0.2, icon: '🌟' },
+  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: '🎲' },
+  { text: '100 Points', value: 100, color: '#FFDDA1', probability: 0.2, icon: '✨' },
+  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: '🎲' },
+  { text: '300 Points', value: 300, color: '#FFC285', probability: 0.1, icon: '🎁' },
+  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: '🎲' },
+  { text: '50 Points', value: 50, color: '#FFE7AD', probability: 0.2, icon: '🌟' },
+  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: '🎲' },
+  { text: '100 Points', value: 100, color: '#FFDDA1', probability: 0.2, icon: '✨' },
 ];
 
-// Weighted random selection function
+// Weighted random selection
 const getWeightedRandomSegment = () => {
   const weights = segments.map(segment => segment.probability);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
@@ -122,146 +122,85 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
       </div>
       
       <div className="relative">
-        {/* Pointer */}
+        {/* Improved pointer */}
         <div className="absolute top-[-25px] left-1/2 transform -translate-x-1/2 z-10">
           <div className="w-0 h-0 border-l-[18px] border-r-[18px] border-t-[35px] border-l-transparent border-r-transparent border-t-brunch-600 drop-shadow-md" />
         </div>
 
-        {/* Wheel Container */}
-        <div className="w-[320px] h-[320px] relative">
-          {/* The wheel itself */}
-          <motion.div
-            ref={wheelRef}
-            className="w-full h-full rounded-full overflow-hidden relative border-[10px] border-brunch-600 shadow-lg"
-            animate={{ rotate: rotation }}
-            transition={{ duration: 5, type: "spring", damping: 30 }}
-          >
-            {/* Wheel Segments - Using SVG for precise text placement */}
-            <svg viewBox="0 0 100 100" className="w-full h-full">
-              <defs>
-                {segments.map((segment, index) => (
-                  <clipPath key={`clip-${index}`} id={`segment-clip-${index}`}>
-                    <path
-                      d={`M50,50 L50,0 A50,50 0 0,1 ${50 + 50 * Math.sin(2 * Math.PI * (index + 1) / segments.length)},${50 - 50 * Math.cos(2 * Math.PI * (index + 1) / segments.length)} Z`}
-                    />
-                  </clipPath>
-                ))}
-              </defs>
-              
-              {segments.map((segment, index) => {
-                const angle = (index * 360) / segments.length;
-                return (
-                  <g key={index} transform={`rotate(${angle} 50 50)`}>
-                    {/* Segment Background */}
-                    <path
-                      d="M50,50 L50,0 A50,50 0 0,1 ${50 + 50 * Math.sin(2 * Math.PI / segments.length)},${50 - 50 * Math.cos(2 * Math.PI / segments.length)} Z"
-                      fill={segment.color}
-                    />
-                    
-                    {/* Text positioned at 30 units from center, rotated to be readable */}
-                    <g transform={`translate(50 25) rotate(${-angle + 180 / segments.length})`}>
-                      <foreignObject x="-15" y="-20" width="30" height="40">
-                        <div className="flex flex-col items-center justify-center h-full" 
-                             style={{ backgroundColor: 'transparent' }}>
-                          <div className="flex justify-center mb-1">{segment.icon}</div>
-                          <div 
-                            className="text-center font-bold text-xs text-brunch-800"
-                            style={{ 
-                              textShadow: '0px 0px 3px white, 0px 0px 3px white, 0px 0px 3px white',
-                              maxWidth: '100%',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            {segment.text}
-                          </div>
-                        </div>
-                      </foreignObject>
-                    </g>
-                  </g>
-                );
-              })}
-            </svg>
-          </motion.div>
+        {/* Wheel with enhanced visual appeal */}
+        <motion.div
+          ref={wheelRef}
+          className="w-[320px] h-[320px] rounded-full overflow-hidden relative border-[10px] border-brunch-600 shadow-lg"
+          animate={{ rotate: rotation }}
+          transition={{ duration: 5, type: "spring", damping: 30 }}
+        >
+          {segments.map((segment, index) => {
+            const angle = 360 / segments.length;
+            const rotation = index * angle;
+            
+            // Calculate position for text to be more centered in the segment
+            const textRadiusPercentage = 75; // Position text at 75% of the radius
+            const textRotationAdjustment = angle / 2;
 
-          {/* Alternative Render Method as Backup - Standard HTML/CSS Wheel */}
-          <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-            <motion.div
-              animate={{ rotate: rotation }}
-              transition={{ duration: 5, type: "spring", damping: 30 }}
-              className="w-full h-full relative"
-            >
-              {segments.map((segment, index) => {
-                const angle = 360 / segments.length;
-                const rotation = index * angle;
-                return (
+            return (
+              <div
+                key={index}
+                className="absolute w-full h-full origin-center"
+                style={{
+                  transform: `rotate(${rotation}deg)`
+                }}
+              >
+                <div
+                  className="absolute w-1/2 h-full"
+                  style={{
+                    backgroundColor: segment.color,
+                    transform: `skewY(-${90 - angle}deg) rotate(${angle / 2}deg)`,
+                    transformOrigin: '100% 50%',
+                    clipPath: `polygon(100% 0, 100% 100%, 0% 50%)`,
+                    boxShadow: 'inset 0 0 5px rgba(0,0,0,0.1)'
+                  }}
+                >
                   <div
-                    key={`segment-${index}`}
-                    className="absolute w-full h-full origin-center"
+                    className="absolute flex flex-col items-center"
                     style={{
-                      transform: `rotate(${rotation}deg)`
+                      top: `${textRadiusPercentage / 2}%`, 
+                      right: `${textRadiusPercentage}%`,
+                      transform: `rotate(-${textRotationAdjustment}deg) translateX(50%) translateY(-50%)`,
+                      width: '100px'
                     }}
                   >
-                    <div
-                      className="absolute w-1/2 h-full"
+                    <div className="text-2xl mb-1">{segment.icon}</div>
+                    <div 
+                      className="text-center text-xs font-bold text-brunch-800"
                       style={{
-                        backgroundColor: segment.color,
-                        transform: `skewY(-${90 - angle}deg) rotate(${angle / 2}deg)`,
-                        transformOrigin: '100% 50%',
-                        clipPath: `polygon(100% 0, 100% 100%, 0% 50%)`,
-                        boxShadow: 'inset 0 0 5px rgba(0,0,0,0.1)'
+                        textShadow: '1px 1px 2px white, -1px -1px 2px white',
+                        maxWidth: '80px'
                       }}
                     >
-                      <div
-                        className="absolute flex flex-col items-center"
-                        style={{
-                          top: '35%',
-                          right: '55%',
-                          transform: `rotate(-${angle/2}deg)`,
-                          width: 'auto',
-                          textAlign: 'center',
-                          zIndex: 10
-                        }}
-                      >
-                        <div className="mb-1">
-                          {React.cloneElement(segment.icon, { className: `h-5 w-5 ${segment.value > 0 ? 'text-amber-600' : 'text-gray-500'}` })}
-                        </div>
-                        <div 
-                          className="text-center text-xs font-bold"
-                          style={{
-                            color: '#333',
-                            backgroundColor: 'rgba(255,255,255,0.7)',
-                            padding: '2px 4px',
-                            borderRadius: '4px',
-                            whiteSpace: 'nowrap',
-                            maxWidth: '90px'
-                          }}
-                        >
-                          {segment.text}
-                        </div>
-                      </div>
+                      {segment.text}
                     </div>
                   </div>
-                );
-              })}
-            </motion.div>
-          </div>
+                </div>
+              </div>
+            );
+          })}
+        </motion.div>
 
-          {/* Center button */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-brunch-600 flex items-center justify-center shadow-md">
-            <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center">
-              <span className="text-brunch-800 font-bold text-sm flex items-center">
-                {isSpinning ? (
-                  <RotateCw className="h-5 w-5 animate-spin text-brunch-600" />
-                ) : (
-                  <span className="text-brunch-700 font-bold">SPIN</span>
-                )}
-              </span>
-            </div>
+        {/* Enhanced center button with subtle animation */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-brunch-600 flex items-center justify-center shadow-md">
+          <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center">
+            <span className="text-brunch-800 font-bold text-sm flex items-center">
+              {isSpinning ? (
+                <RotateCw className="h-5 w-5 animate-spin text-brunch-600" />
+              ) : (
+                <span className="text-brunch-700 font-bold">SPIN</span>
+              )}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Spin button */}
+      {/* Improved spin button */}
       <Button
         onClick={spinWheel}
         disabled={isSpinning || !hasPendingSpin}
@@ -285,7 +224,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
         )}
       </Button>
 
-      {/* Result display */}
+      {/* Enhanced result display with animation */}
       {result !== null && (
         <motion.div 
           className="mt-4 text-center p-4 rounded-lg bg-white shadow-md border border-brunch-100"

@@ -4,8 +4,7 @@ project_id = "rvduyqzejmmwwixtuevy"
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "storage", "graphql_public"]
-extra_schemas = ["supabase_functions"]
+schemas = ["public", "storage", "graphql_public", "supabase_functions"]
 
 [db]
 port = 54322

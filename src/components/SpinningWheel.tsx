@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -65,59 +66,40 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
 
   const spinWheel = async () => {
     if (isSpinning || !hasPendingSpin) return;
-    
+
     setIsSpinning(true);
     setResult(null);
-    
+
     try {
-      // Determine the winning segment (weighted random)
       const winningSegmentIndex = getWeightedRandomSegment();
-      
-      // Calculate the rotation to land on the winning segment
-      // Each segment is 360/segments.length degrees
       const segmentAngle = 360 / segments.length;
-      
-      // Rotate at least 5 full spins (1800 degrees) plus the offset to land on the segment
-      // We need to add 0.5 * segmentAngle to land in the middle of the segment
       const targetRotation = 1800 + (winningSegmentIndex * segmentAngle) + (0.5 * segmentAngle);
-      
-      // Add some randomness to make it look more natural
       const randomOffset = Math.random() * (segmentAngle * 0.7);
       const finalRotation = rotation + targetRotation + randomOffset;
-      
+
       setRotation(finalRotation);
-      
-      // Wait for animation to complete
+
       setTimeout(async () => {
         const points = segments[winningSegmentIndex].value;
         setResult(points);
-        
-        if (points > 0) {
-          try {
-            // Add points to user's balance
-            await loyaltyService.addPointsFromSpin(points);
-            // Mark the spin as used
-            await loyaltyService.markSpinAsUsed();
-            setHasPendingSpin(false);
-          } catch (error) {
-            console.error("Error adding points:", error);
-            toast.error("Failed to add points. Please try again.");
-          }
-        } else {
-          // Even if no points were won, mark the spin as used
+
+        try {
           await loyaltyService.markSpinAsUsed();
           setHasPendingSpin(false);
-          toast.info("Better luck next time!");
+
+          if (points > 0) {
+            await loyaltyService.addPointsFromSpin(points);
+          } else {
+            toast.info("Better luck next time!");
+          }
+        } catch (error) {
+          console.error("Error adding points:", error);
+          toast.error("Failed to update points. Please try again.");
         }
-        
-        // Always call onComplete, even if points were not added successfully
-        if (onComplete) {
-          onComplete(points);
-        }
-        
-        // Reset the spinning state but keep the rotation value
+
+        if (onComplete) onComplete(points);
         setIsSpinning(false);
-      }, 5000); // 5 seconds to match animation duration
+      }, 5000);
     } catch (error) {
       console.error("Error in spinWheel:", error);
       setIsSpinning(false);
@@ -128,13 +110,13 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
   return (
     <div className="flex flex-col items-center justify-center gap-6 py-6 relative">
       <div className="relative">
-        {/* Pointer/indicator */}
+        {/* Pointer */}
         <div className="absolute top-[-20px] left-1/2 transform -translate-x-1/2 z-10">
           <div className="w-0 h-0 border-l-[15px] border-r-[15px] border-t-[30px] border-l-transparent border-r-transparent border-t-brunch-600" />
         </div>
-        
+
         {/* Wheel */}
-        <motion.div 
+        <motion.div
           ref={wheelRef}
           className="w-[300px] h-[300px] rounded-full overflow-hidden relative border-8 border-brunch-600"
           animate={{ rotate: rotation }}
@@ -142,56 +124,50 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
         >
           {segments.map((segment, index) => {
             const angle = 360 / segments.length;
+            const rotation = index * angle;
+
             return (
               <div
                 key={index}
                 className="absolute w-full h-full origin-center"
                 style={{
-                  transform: `rotate(${index * angle}deg)`,
-                  clipPath: `polygon(50% 50%, 50% 0%, ${50 + 50 * Math.cos((angle * Math.PI) / 180)}% ${50 - 50 * Math.sin((angle * Math.PI) / 180)}%)`
+                  transform: `rotate(${rotation}deg)`
                 }}
               >
-                <div 
-                  className="w-full h-full flex items-center justify-center"
-                  style={{ backgroundColor: segment.color }}
+                <div
+                  className="absolute w-1/2 h-full flex items-center justify-center"
+                  style={{
+                    backgroundColor: segment.color,
+                    transform: `skewY(-${90 - angle}deg) rotate(${angle / 2}deg)`,
+                    transformOrigin: '100% 50%',
+                    clipPath: `polygon(100% 0, 100% 100%, 0% 50%)`
+                  }}
                 >
-                  {/* Improved text positioning */}
-                  <div 
-                    className="absolute"
-                    style={{ 
-                      transform: `rotate(${angle / 2}deg)`,
-                      top: '40px',
-                      left: '150px',
-                      width: '80px',
-                      textAlign: 'center',
-                      transformOrigin: 'center',
+                  <div
+                    className="text-center text-xs font-bold text-brunch-800"
+                    style={{
+                      transform: `rotate(-${angle / 2}deg)`,
+                      whiteSpace: 'nowrap',
+                      textShadow: '0px 0px 2px white, 0px 0px 2px white'
                     }}
                   >
-                    <div 
-                      className="font-bold text-xs text-brunch-800"
-                      style={{ 
-                        transform: `rotate(${90 - index * angle}deg)`,
-                        whiteSpace: 'nowrap',
-                        textShadow: '0px 0px 3px white, 0px 0px 3px white',
-                      }}
-                    >
-                      {segment.text}
-                    </div>
+                    {segment.text}
                   </div>
                 </div>
               </div>
             );
           })}
         </motion.div>
-        
-        {/* Center button */}
+
+        {/* Center Button (non-clickable) */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 w-16 h-16 rounded-full bg-brunch-600 flex items-center justify-center">
           <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center">
             <span className="text-brunch-800 font-bold text-sm">SPIN</span>
           </div>
         </div>
       </div>
-      
+
+      {/* Spin Button */}
       <Button
         onClick={spinWheel}
         disabled={isSpinning || !hasPendingSpin}
@@ -199,13 +175,11 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
       >
         {isSpinning ? "Spinning..." : hasPendingSpin ? "Spin the Wheel" : "No Spins Available"}
       </Button>
-      
+
       {result !== null && (
         <div className="mt-4 text-center">
           <h3 className="text-xl font-bold text-brunch-700">
-            {result > 0 
-              ? `Congratulations! You won ${result} points!` 
-              : "Better luck next time!"}
+            {result > 0 ? `Congratulations! You won ${result} points!` : "Better luck next time!"}
           </h3>
         </div>
       )}

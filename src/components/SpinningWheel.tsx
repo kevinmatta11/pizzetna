@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -45,10 +46,26 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<number | null>(null);
+  const [hasPendingSpin, setHasPendingSpin] = useState(true);
   const wheelRef = useRef<HTMLDivElement>(null);
+  
+  // Check if user has a pending spin from URL parameter
+  useEffect(() => {
+    const checkPendingSpin = async () => {
+      try {
+        const hasSpin = await loyaltyService.checkPendingSpin();
+        setHasPendingSpin(hasSpin);
+      } catch (error) {
+        console.error("Error checking for pending spin:", error);
+        setHasPendingSpin(false);
+      }
+    };
+    
+    checkPendingSpin();
+  }, []);
 
   const spinWheel = async () => {
-    if (isSpinning || !hasSpinAvailable) return;
+    if (isSpinning || !hasPendingSpin) return;
     
     setIsSpinning(true);
     setResult(null);
@@ -80,11 +97,17 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
           try {
             // Add points to user's balance
             await loyaltyService.addPointsFromSpin(points);
+            // Mark the spin as used
+            await loyaltyService.markSpinAsUsed();
+            setHasPendingSpin(false);
           } catch (error) {
             console.error("Error adding points:", error);
             toast.error("Failed to add points. Please try again.");
           }
         } else {
+          // Even if no points were won, mark the spin as used
+          await loyaltyService.markSpinAsUsed();
+          setHasPendingSpin(false);
           toast.info("Better luck next time!");
         }
         
@@ -130,12 +153,21 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
                 }}
               >
                 <div 
-                  className="w-full h-full flex items-center justify-center pt-6"
-                  style={{ backgroundColor: segment.color, transform: `rotate(${angle / 2}deg)` }}
+                  className="w-full h-full flex items-center justify-center"
+                  style={{ backgroundColor: segment.color }}
                 >
-                  <p className="font-bold text-xs text-center text-brunch-800 transform -translate-y-20 rotate-90">
-                    {segment.text}
-                  </p>
+                  {/* Fixed text orientation */}
+                  <div 
+                    className="absolute whitespace-nowrap"
+                    style={{ 
+                      transform: `rotate(${angle / 2}deg) translateY(-130px) rotate(90deg)`,
+                      transformOrigin: 'center'
+                    }}
+                  >
+                    <p className="font-bold text-xs text-center text-brunch-800">
+                      {segment.text}
+                    </p>
+                  </div>
                 </div>
               </div>
             );
@@ -152,10 +184,10 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
       
       <Button
         onClick={spinWheel}
-        disabled={isSpinning || !hasSpinAvailable}
+        disabled={isSpinning || !hasPendingSpin}
         className="bg-brunch-500 hover:bg-brunch-600 text-white font-bold px-8 py-2 rounded-full"
       >
-        {isSpinning ? "Spinning..." : hasSpinAvailable ? "Spin the Wheel" : "No Spins Available"}
+        {isSpinning ? "Spinning..." : hasPendingSpin ? "Spin the Wheel" : "No Spins Available"}
       </Button>
       
       {result !== null && (

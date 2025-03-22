@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -57,6 +58,66 @@ export const loyaltyService = {
     } catch (error) {
       console.error("Error in getTransactionHistory:", error);
       throw error;
+    }
+  },
+  
+  // Check if user has a pending spin
+  async checkPendingSpin(): Promise<boolean> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return false;
+      
+      // Check if there are any orders with pending_spin = true
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('user_id', user.user.id)
+        .eq('pending_spin', true)
+        .limit(1);
+      
+      if (error) {
+        console.error("Error checking pending spin:", error);
+        throw error;
+      }
+      
+      return data && data.length > 0;
+    } catch (error) {
+      console.error("Error in checkPendingSpin:", error);
+      return false;
+    }
+  },
+  
+  // Mark spin as used
+  async markSpinAsUsed(): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+      
+      // Get the first order with pending spin
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('user_id', user.user.id)
+        .eq('pending_spin', true)
+        .limit(1)
+        .single();
+      
+      if (error) {
+        console.error("Error finding order with pending spin:", error);
+        return;
+      }
+      
+      // Update the order to mark the spin as used
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ pending_spin: false })
+        .eq('id', data.id);
+      
+      if (updateError) {
+        console.error("Error marking spin as used:", updateError);
+      }
+    } catch (error) {
+      console.error("Error in markSpinAsUsed:", error);
     }
   },
   

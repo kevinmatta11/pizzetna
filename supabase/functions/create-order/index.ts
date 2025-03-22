@@ -36,13 +36,17 @@ serve(async (req) => {
     
     console.log("Creating order with:", { userId, totalAmount, itemsCount: items.length });
     
+    // Set pending_spin to true only for authenticated users
+    const pending_spin = userId ? true : false;
+    
     // Create the order
     const { data: orderData, error: orderError } = await supabaseAdmin
       .from('orders')
       .insert({
         user_id: userId,
         total_amount: totalAmount,
-        status: 'paid'
+        status: 'paid',
+        pending_spin: pending_spin
       })
       .select('id')
       .single();

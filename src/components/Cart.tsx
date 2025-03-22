@@ -92,6 +92,7 @@ export const Cart = () => {
       
       if (user) {
         // Authenticated user flow
+        console.log("Creating order for authenticated user:", user.id);
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
           .insert({
@@ -110,6 +111,7 @@ export const Cart = () => {
         newOrderId = orderData.id;
       } else {
         // Anonymous user flow
+        console.log("Creating anonymous order");
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
           .insert({
@@ -138,16 +140,18 @@ export const Cart = () => {
       
       console.log("Submitting order items:", orderItems);
       
-      for (const item of orderItems) {
-        const { error: itemError } = await supabase
-          .from('order_items')
-          .insert(item);
-        
-        if (itemError) {
-          console.error("Order item error:", itemError);
-          console.error("Problematic item:", item);
-          throw itemError;
-        }
+      // Using Promise.all to insert all order items in parallel
+      const itemPromises = orderItems.map(item => 
+        supabase.from('order_items').insert(item)
+      );
+      
+      const itemResults = await Promise.all(itemPromises);
+      
+      // Check for any errors in the results
+      const itemErrors = itemResults.filter(result => result.error);
+      if (itemErrors.length > 0) {
+        console.error("Order item errors:", itemErrors);
+        throw itemErrors[0].error;
       }
       
       if (pointsApplied > 0 && user) {

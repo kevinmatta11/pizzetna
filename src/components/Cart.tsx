@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { X, Minus, Plus, ShoppingCart, CreditCard, Trash2, TruckIcon, Check, Coins } from 'lucide-react';
+import { X, Minus, Plus, ShoppingCart, CreditCard, Trash2, TruckIcon, Check, Coins, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -26,6 +27,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Separator } from '@/components/ui/separator';
 import { PaymentForm } from '@/components/PaymentForm';
@@ -35,6 +44,7 @@ import { SpinningWheel } from '@/components/SpinningWheel';
 import { supabase } from "@/integrations/supabase/client";
 import { loyaltyService } from '@/services/loyaltyService';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 type CheckoutStep = 'cart' | 'delivery' | 'payment' | 'confirmation' | 'spin';
 type PaymentMethod = 'credit' | 'cash';
@@ -43,6 +53,7 @@ export const Cart = () => {
   const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryFormData | null>(null);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('cart');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit');
@@ -50,6 +61,7 @@ export const Cart = () => {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [orderId, setOrderId] = useState<string | null>(null);
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const navigate = useNavigate();
 
   const handleCheckout = () => {
     if (items.length === 0) return;
@@ -61,31 +73,60 @@ export const Cart = () => {
     setCheckoutStep('payment');
   };
 
-  const handlePaymentSuccess = async () => {
-    if (!user) {
-      toast.error("You must be logged in to complete your order");
-      return;
+  const handleLoginRedirect = () => {
+    // Store order ID in localStorage before redirecting
+    if (orderId) {
+      localStorage.setItem('pendingOrderId', orderId);
     }
-    
+    setLoginDialogOpen(false);
+    setOpen(false);
+    navigate('/auth');
+  };
+
+  const handlePaymentSuccess = async () => {
     try {
       const finalAmount = Math.max(0, totalPrice + 3.99 - discountAmount);
       
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
-          total_amount: finalAmount,
-          status: 'paid'
-        })
-        .select('id')
-        .single();
+      // For anonymous users, create an order without user_id
+      let newOrderId: string;
       
-      if (orderError) {
-        console.error("Order error:", orderError);
-        throw orderError;
+      if (user) {
+        // Authenticated user flow
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            user_id: user.id,
+            total_amount: finalAmount,
+            status: 'paid'
+          })
+          .select('id')
+          .single();
+        
+        if (orderError) {
+          console.error("Order error:", orderError);
+          throw orderError;
+        }
+        
+        newOrderId = orderData.id;
+      } else {
+        // Anonymous user flow
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            total_amount: finalAmount,
+            status: 'paid'
+          })
+          .select('id')
+          .single();
+        
+        if (orderError) {
+          console.error("Order error:", orderError);
+          throw orderError;
+        }
+        
+        newOrderId = orderData.id;
       }
       
-      const newOrderId = orderData.id;
       setOrderId(newOrderId);
       
       const orderItems = items.map(item => ({
@@ -109,12 +150,20 @@ export const Cart = () => {
         }
       }
       
-      if (pointsApplied > 0) {
+      if (pointsApplied > 0 && user) {
         await loyaltyService.redeemPoints(pointsApplied, newOrderId);
       }
       
       toast.success("Your order has been placed successfully!");
-      setCheckoutStep('spin');
+      
+      // Only show spin wheel dialog for authenticated users
+      if (user) {
+        setCheckoutStep('spin');
+      } else {
+        // For anonymous users, ask if they want to log in for rewards
+        setCheckoutStep('confirmation');
+        setLoginDialogOpen(true);
+      }
     } catch (error) {
       console.error("Error creating order:", error);
       toast.error("There was a problem with your order. Please try again.");
@@ -349,6 +398,49 @@ export const Cart = () => {
     </div>
   );
 
+  const LoginPrompt = () => (
+    <Dialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Join our Loyalty Program</DialogTitle>
+          <DialogDescription>
+            Log in or sign up to spin the wheel and earn loyalty points for future discounts!
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col items-center justify-center py-4 text-center">
+          <div className="h-16 w-16 bg-brunch-100 rounded-full flex items-center justify-center mb-4">
+            <Coins className="h-8 w-8 text-brunch-600" />
+          </div>
+          <p className="text-sm text-brunch-600 mb-4">
+            Your order has been placed successfully. Would you like to create an account to start earning loyalty rewards?
+          </p>
+        </div>
+        <DialogFooter className="sm:justify-center gap-2 flex-col sm:flex-row">
+          <Button
+            variant="default"
+            className="bg-brunch-500 hover:bg-brunch-600"
+            onClick={handleLoginRedirect}
+          >
+            <LogIn className="mr-2 h-4 w-4" />
+            Sign up for rewards
+          </Button>
+          <Button
+            variant="outline"
+            className="border-brunch-200"
+            onClick={() => {
+              setLoginDialogOpen(false);
+              clearCart();
+              setOpen(false);
+              setCheckoutStep('cart');
+            }}
+          >
+            Maybe later
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   const OrderConfirmation = () => (
     <div className="flex flex-col items-center justify-center py-8 text-center">
       <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
@@ -397,59 +489,60 @@ export const Cart = () => {
     }
   };
 
-  if (isDesktop) {
-    return (
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <CartTrigger>
-            {totalItems > 0 && <span className="sr-only">Open cart ({totalItems} items)</span>}
-          </CartTrigger>
-        </SheetTrigger>
-        <SheetContent className="w-[350px] sm:w-[450px] flex flex-col">
-          <SheetHeader>
-            <SheetTitle className="flex items-center">
-              <ShoppingCart className="h-5 w-5 mr-2" />
-              {checkoutStep === 'cart' ? `Your Order ${totalItems > 0 ? `(${totalItems})` : ''}` : 'Checkout'}
-            </SheetTitle>
-          </SheetHeader>
-          
-          <div className="flex-1 overflow-auto">
-            {renderStepContent()}
-          </div>
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
   return (
     <>
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerTrigger asChild>
-          <CartTrigger>
-            {totalItems > 0 && <span className="sr-only">Open cart ({totalItems} items)</span>}
-          </CartTrigger>
-        </DrawerTrigger>
-        <DrawerContent className="px-4">
-          <DrawerHeader className="text-left">
-            <DrawerTitle className="flex items-center">
-              <ShoppingCart className="h-5 w-5 mr-2" />
-              {checkoutStep === 'cart' ? `Your Order ${totalItems > 0 ? `(${totalItems})` : ''}` : 'Checkout'}
-            </DrawerTitle>
-          </DrawerHeader>
-          
-          <div className="px-4 pb-8">
-            {renderStepContent()}
-          </div>
-          
-          {checkoutStep === 'cart' && (
-            <DrawerFooter>
-              <DrawerClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DrawerClose>
-            </DrawerFooter>
-          )}
-        </DrawerContent>
-      </Drawer>
+      {isDesktop ? (
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <CartTrigger>
+              {totalItems > 0 && <span className="sr-only">Open cart ({totalItems} items)</span>}
+            </CartTrigger>
+          </SheetTrigger>
+          <SheetContent className="w-[350px] sm:w-[450px] flex flex-col">
+            <SheetHeader>
+              <SheetTitle className="flex items-center">
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                {checkoutStep === 'cart' ? `Your Order ${totalItems > 0 ? `(${totalItems})` : ''}` : 'Checkout'}
+              </SheetTitle>
+            </SheetHeader>
+            
+            <div className="flex-1 overflow-auto">
+              {renderStepContent()}
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Drawer open={open} onOpenChange={setOpen}>
+          <DrawerTrigger asChild>
+            <CartTrigger>
+              {totalItems > 0 && <span className="sr-only">Open cart ({totalItems} items)</span>}
+            </CartTrigger>
+          </DrawerTrigger>
+          <DrawerContent className="px-4">
+            <DrawerHeader className="text-left">
+              <DrawerTitle className="flex items-center">
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                {checkoutStep === 'cart' ? `Your Order ${totalItems > 0 ? `(${totalItems})` : ''}` : 'Checkout'}
+              </DrawerTitle>
+            </DrawerHeader>
+            
+            <div className="px-4 pb-8">
+              {renderStepContent()}
+            </div>
+            
+            {checkoutStep === 'cart' && (
+              <DrawerFooter>
+                <DrawerClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DrawerClose>
+              </DrawerFooter>
+            )}
+          </DrawerContent>
+        </Drawer>
+      )}
+      
+      {/* Login dialog that appears after checkout for non-authenticated users */}
+      <LoginPrompt />
     </>
   );
 };

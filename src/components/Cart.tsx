@@ -65,6 +65,7 @@ export const Cart = () => {
   const [showSpinDialog, setShowSpinDialog] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const handleCheckout = () => {
@@ -80,6 +81,7 @@ export const Cart = () => {
   const handlePaymentSuccess = async () => {
     try {
       setIsProcessing(true);
+      setErrorMessage(null);
       const finalAmount = Math.max(0, totalPrice + 3.99 - discountAmount);
       
       console.log("Creating order with amount:", finalAmount);
@@ -98,6 +100,7 @@ export const Cart = () => {
       if (orderError) {
         console.error("Order creation error:", orderError);
         toast.error(`Order error: ${orderError.message}`);
+        setErrorMessage(`Order creation failed: ${orderError.message}`);
         throw orderError;
       }
       
@@ -119,6 +122,7 @@ export const Cart = () => {
         if (itemError) {
           console.error("Order item error:", itemError);
           toast.error(`Item error: ${itemError.message}`);
+          setErrorMessage(`Order item failed: ${itemError.message}`);
           throw itemError;
         }
       }
@@ -162,6 +166,7 @@ export const Cart = () => {
     } catch (error: any) {
       console.error("Error creating order:", error);
       toast.error(`There was a problem with your order: ${error.message}`);
+      setErrorMessage(`Order failed: ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -193,6 +198,7 @@ export const Cart = () => {
   const handleLoginRedirect = () => {
     // Store spin intention in localStorage
     localStorage.setItem('redirectAfterLogin', 'spin-wheel');
+    // Fix the TypeScript error by converting the orderId to string
     localStorage.setItem('orderId', orderId || '');
     
     // Navigate to auth page
@@ -399,10 +405,17 @@ export const Cart = () => {
                     <span className="ml-3">Processing payment...</span>
                   </div>
                 ) : (
-                  <PaymentForm
-                    totalAmount={parseFloat(finalTotal)}
-                    onSuccess={handlePaymentSuccess}
-                  />
+                  <>
+                    {errorMessage && (
+                      <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md mb-4 text-sm">
+                        {errorMessage}
+                      </div>
+                    )}
+                    <PaymentForm
+                      totalAmount={parseFloat(finalTotal)}
+                      onSuccess={handlePaymentSuccess}
+                    />
+                  </>
                 )}
               </TabsContent>
               
@@ -417,6 +430,12 @@ export const Cart = () => {
                       Pay with cash when your order is delivered to your doorstep.
                     </p>
                   </div>
+                  
+                  {errorMessage && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md mb-4 text-sm">
+                      {errorMessage}
+                    </div>
+                  )}
                   
                   <div className="py-4">
                     <div className="flex items-center justify-between mb-2">

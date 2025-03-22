@@ -99,27 +99,24 @@ export const Cart = () => {
       const newOrderId = orderData.id;
       setOrderId(newOrderId);
       
-      const orderItems = items.map(item => ({
-        order_id: newOrderId,
-        price: item.price,
-        quantity: item.quantity,
-        menu_item_id: item.id.toString()
-      }));
-      
-      console.log("Submitting order items:", orderItems);
-      
-      for (const item of orderItems) {
+      // Create order items
+      for (const item of items) {
         const { error: itemError } = await supabase
           .from('order_items')
-          .insert(item);
+          .insert({
+            order_id: newOrderId,
+            price: item.price,
+            quantity: item.quantity,
+            menu_item_id: item.id
+          });
         
         if (itemError) {
           console.error("Order item error:", itemError);
-          console.error("Problematic item:", item);
           throw itemError;
         }
       }
       
+      // Apply loyalty points if user is logged in
       if (user && pointsApplied > 0) {
         await loyaltyService.redeemPoints(pointsApplied, newOrderId);
       }
@@ -235,6 +232,7 @@ export const Cart = () => {
     </Button>
   );
 
+  // Cart Items Component
   const CartItems = () => (
     <div className="flex flex-col gap-4 py-4 overflow-auto max-h-[50vh]">
       {items.length === 0 ? (
@@ -286,6 +284,7 @@ export const Cart = () => {
     </div>
   );
 
+  // Cart Footer Component
   const CartFooter = () => (
     <>
       {items.length > 0 && (
@@ -346,97 +345,6 @@ export const Cart = () => {
     </>
   );
 
-  const PaymentOptions = () => (
-    <div className="flex flex-col space-y-6">
-      <Button 
-        variant="ghost" 
-        className="mb-2" 
-        onClick={() => setCheckoutStep('delivery')}
-      >
-        <X className="h-4 w-4 mr-2" /> Back to delivery
-      </Button>
-      
-      <h3 className="text-lg font-medium">Select Payment Method</h3>
-      
-      <Tabs defaultValue="credit" onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}>
-        <TabsList className="grid grid-cols-2 mb-4">
-          <TabsTrigger value="credit">Credit Card</TabsTrigger>
-          <TabsTrigger value="cash">Cash on Delivery</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="credit">
-          <PaymentForm
-            totalAmount={(totalPrice + 3.99).toFixed(2)}
-            onSuccess={handlePaymentSuccess}
-          />
-        </TabsContent>
-        
-        <TabsContent value="cash">
-          <div className="space-y-4">
-            <div className="bg-brunch-50 p-4 rounded-md">
-              <h4 className="font-medium mb-2 flex items-center">
-                <TruckIcon className="h-4 w-4 mr-2" />
-                Cash on Delivery
-              </h4>
-              <p className="text-sm text-brunch-600">
-                Pay with cash when your order is delivered to your doorstep.
-              </p>
-            </div>
-            
-            <div className="py-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-brunch-600">Total Amount:</span>
-                <span className="font-bold">${(totalPrice + 3.99).toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-brunch-600">Delivery Address:</span>
-              </div>
-              <div className="bg-brunch-50 p-3 rounded text-sm">
-                <p><strong>{deliveryInfo?.fullName}</strong></p>
-                <p>{deliveryInfo?.address}</p>
-                <p>{deliveryInfo?.city}, {deliveryInfo?.postalCode}</p>
-                <p>Phone: {deliveryInfo?.phone}</p>
-                {deliveryInfo?.notes && (
-                  <p className="mt-2"><strong>Notes:</strong> {deliveryInfo.notes}</p>
-                )}
-              </div>
-            </div>
-            
-            <Button
-              onClick={handleCashPayment}
-              className="w-full bg-brunch-500 hover:bg-brunch-600 text-white"
-            >
-              Place Order
-            </Button>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-
-  const OrderSpin = () => (
-    <div className="flex flex-col items-center py-4 text-center">
-      <h3 className="text-xl font-medium text-brunch-900 mb-6">Spin to Win Loyalty Points!</h3>
-      <SpinningWheel onComplete={handleSpinComplete} hasSpinAvailable={true} />
-    </div>
-  );
-
-  const OrderConfirmation = () => (
-    <div className="flex flex-col items-center justify-center py-8 text-center">
-      <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-        <Check className="h-8 w-8 text-green-600" />
-      </div>
-      <h3 className="text-xl font-medium text-brunch-900 mb-2">Order Placed Successfully!</h3>
-      <p className="text-sm text-brunch-600 mb-4">Thank you for your order</p>
-      {paymentMethod === 'cash' && (
-        <div className="bg-brunch-50 p-3 rounded-md text-sm text-left w-full mt-4">
-          <p className="font-medium">Please have the exact change ready:</p>
-          <p className="font-bold text-lg">${(totalPrice + 3.99).toFixed(2)}</p>
-        </div>
-      )}
-    </div>
-  );
-
   const renderStepContent = () => {
     switch (checkoutStep) {
       case 'delivery':
@@ -474,7 +382,7 @@ export const Cart = () => {
               
               <TabsContent value="credit">
                 <PaymentForm
-                  totalAmount={(totalPrice + 3.99).toFixed(2)}
+                  totalAmount={finalTotal}
                   onSuccess={handlePaymentSuccess}
                 />
               </TabsContent>
@@ -494,7 +402,7 @@ export const Cart = () => {
                   <div className="py-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-brunch-600">Total Amount:</span>
-                      <span className="font-bold">${(totalPrice + 3.99).toFixed(2)}</span>
+                      <span className="font-bold">${finalTotal}</span>
                     </div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-brunch-600">Delivery Address:</span>
@@ -522,9 +430,28 @@ export const Cart = () => {
           </div>
         );
       case 'spin':
-        return <OrderSpin />;
+        return (
+          <div className="flex flex-col items-center py-4 text-center">
+            <h3 className="text-xl font-medium text-brunch-900 mb-6">Spin to Win Loyalty Points!</h3>
+            <SpinningWheel onComplete={handleSpinComplete} hasSpinAvailable={true} />
+          </div>
+        );
       case 'confirmation':
-        return <OrderConfirmation />;
+        return (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <Check className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-medium text-brunch-900 mb-2">Order Placed Successfully!</h3>
+            <p className="text-sm text-brunch-600 mb-4">Thank you for your order</p>
+            {paymentMethod === 'cash' && (
+              <div className="bg-brunch-50 p-3 rounded-md text-sm text-left w-full mt-4">
+                <p className="font-medium">Please have the exact change ready:</p>
+                <p className="font-bold text-lg">${finalTotal}</p>
+              </div>
+            )}
+          </div>
+        );
       default:
         return (
           <>
@@ -535,6 +462,7 @@ export const Cart = () => {
     }
   };
 
+  // Desktop view with Sheet
   if (isDesktop) {
     return (
       <>
@@ -593,6 +521,7 @@ export const Cart = () => {
     );
   }
 
+  // Mobile view with Drawer
   return (
     <>
       <Drawer open={open} onOpenChange={setOpen}>
@@ -609,7 +538,7 @@ export const Cart = () => {
             </DrawerTitle>
           </DrawerHeader>
           
-          <div className="px-4 pb-8">
+          <div className="px-4 pb-8 max-h-[calc(100vh-12rem)] overflow-y-auto">
             {renderStepContent()}
           </div>
           

@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Flame } from 'lucide-react';
 import Header from '@/components/Header';
+import { Cart } from '@/components/Cart';
 import { toast } from "sonner";
 
 interface MenuItem {
@@ -114,9 +115,9 @@ export default function Menu() {
     : menuItems;
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Header />
-      <div className="container mx-auto pt-24 pb-8">
+      <div className="container mx-auto py-24 flex-grow">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-brunch-800">Our Menu</h1>
           <p className="text-brunch-600 mt-2">Explore our delicious selection of pizzas and more</p>
@@ -215,6 +216,10 @@ export default function Menu() {
           </>
         )}
       </div>
-    </>
+      
+      <div className="fixed bottom-4 right-4 z-50">
+        <Cart />
+      </div>
+    </div>
   );
 }

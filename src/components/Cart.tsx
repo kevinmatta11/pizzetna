@@ -198,8 +198,8 @@ export const Cart = () => {
   const handleLoginRedirect = () => {
     // Store spin intention in localStorage
     localStorage.setItem('redirectAfterLogin', 'spin-wheel');
-    // Fix the TypeScript error by converting the orderId to string
-    localStorage.setItem('orderId', orderId || '');
+    // Fix the TypeScript error by ensuring orderId is a string
+    localStorage.setItem('orderId', orderId ? orderId.toString() : '');
     
     // Navigate to auth page
     navigate('/auth');
@@ -632,3 +632,4 @@ export const Cart = () => {
     </>
   );
 };
+

@@ -8,8 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Flame } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import Header from '@/components/Header';
-import { Cart } from '@/components/Cart';
 import { toast } from "sonner";
 
 interface MenuItem {
@@ -62,7 +62,6 @@ export default function Menu() {
         setMenuItems(menuItemsData || []);
       } catch (error) {
         console.error('Error fetching data:', error);
-        toast.error("Failed to load menu. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -78,7 +77,6 @@ export default function Menu() {
         name: menuItem.name,
         price: menuItem.price,
         imageSrc: menuItem.image_url || '/placeholder.svg',
-        quantity: 1 // Set default quantity
       };
       
       cart.addItem(item);
@@ -115,13 +113,13 @@ export default function Menu() {
     : menuItems;
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <>
       <Header />
-      <div className="container mx-auto py-16 md:py-24 px-4 flex-grow">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-brunch-800">Our Menu</h1>
-          <p className="text-brunch-600 mt-2">Explore our delicious selection of pizzas and more</p>
-        </div>
+      <div className="container mx-auto pt-24 pb-8">
+        <PageHeader
+          title="Our Menu"
+          description="Explore our delicious selection of pizzas and more"
+        />
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
@@ -216,10 +214,6 @@ export default function Menu() {
           </>
         )}
       </div>
-      
-      <div className="fixed bottom-4 right-4 z-50">
-        <Cart />
-      </div>
-    </div>
+    </>
   );
 }

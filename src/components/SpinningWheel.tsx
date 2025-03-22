@@ -1,60 +1,36 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { loyaltyService } from '@/services/loyaltyService';
 
-// Wheel segment definitions with improved weightings and visuals
+// Wheel segment definitions
 const segments = [
-  { text: 'Better Luck Next Time', value: 0, color: '#EEEEEE', probability: 0.3 },
-  { text: '50 Points', value: 50, color: '#FFF7CD', probability: 0.25 },
-  { text: 'Better Luck Next Time', value: 0, color: '#EEEEEE', probability: 0.3 },
+  { text: 'Better Luck Next Time', value: 0, color: '#EEEEEE', probability: 0.5 },
+  { text: '50 Points', value: 50, color: '#FFF7CD', probability: 0.2 },
+  { text: 'Better Luck Next Time', value: 0, color: '#EEEEEE', probability: 0.5 },
   { text: '100 Points', value: 100, color: '#FFE7BA', probability: 0.2 },
-  { text: 'Better Luck Next Time', value: 0, color: '#EEEEEE', probability: 0.3 },
+  { text: 'Better Luck Next Time', value: 0, color: '#EEEEEE', probability: 0.5 },
   { text: '300 Points', value: 300, color: '#FFD1A1', probability: 0.1 },
-  { text: 'Better Luck Next Time', value: 0, color: '#EEEEEE', probability: 0.3 },
-  { text: '50 Points', value: 50, color: '#FFF7CD', probability: 0.25 },
-  { text: 'Better Luck Next Time', value: 0, color: '#EEEEEE', probability: 0.3 },
+  { text: 'Better Luck Next Time', value: 0, color: '#EEEEEE', probability: 0.5 },
+  { text: '50 Points', value: 50, color: '#FFF7CD', probability: 0.2 },
+  { text: 'Better Luck Next Time', value: 0, color: '#EEEEEE', probability: 0.5 },
   { text: '100 Points', value: 100, color: '#FFE7BA', probability: 0.2 },
 ];
 
-// Improved weighted random selection with better distribution
+// Weighted random selection
 const getWeightedRandomSegment = () => {
-  // Normalize probabilities to ensure they sum to 1
-  const totalProbability = segments.reduce((acc, segment) => acc + segment.probability, 0);
-  const normalizedSegments = segments.map(segment => ({
-    ...segment,
-    probability: segment.probability / totalProbability
-  }));
+  const weights = segments.map(segment => segment.probability);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  let random = Math.random() * totalWeight;
   
-  // Get a random value between 0 and 1
-  const random = Math.random();
-  let cumulativeProbability = 0;
-  
-  for (let i = 0; i < normalizedSegments.length; i++) {
-    cumulativeProbability += normalizedSegments[i].probability;
-    if (random <= cumulativeProbability) {
+  for (let i = 0; i < segments.length; i++) {
+    if (random < weights[i]) {
       return i;
     }
+    random -= weights[i];
   }
-  
   return 0; // Fallback
-};
-
-// Function to calculate the rotation angle to land on a specific segment
-const calculateTargetRotation = (segmentIndex: number, currentRotation: number) => {
-  const segmentAngle = 360 / segments.length;
-  const segmentOffset = segmentAngle / 2; // Target middle of segment
-  
-  // Calculate base rotation (minimum 5 full rotations + offset to target segment)
-  const baseRotation = 1800 + (segmentIndex * segmentAngle);
-  
-  // Small random offset for natural feel (10% of segment width)
-  const randomOffset = (Math.random() - 0.5) * (segmentAngle * 0.2);
-  
-  // Calculate final rotation from current position
-  return currentRotation + baseRotation + segmentOffset + randomOffset;
 };
 
 interface SpinningWheelProps {
@@ -69,7 +45,6 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<number | null>(null);
-  const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
   const wheelRef = useRef<HTMLDivElement>(null);
 
   const spinWheel = async () => {
@@ -81,11 +56,20 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
     try {
       // Determine the winning segment (weighted random)
       const winningSegmentIndex = getWeightedRandomSegment();
-      setSelectedSegment(winningSegmentIndex);
       
-      // Calculate precise rotation to land on the winning segment
-      const targetRotation = calculateTargetRotation(winningSegmentIndex, rotation);
-      setRotation(targetRotation);
+      // Calculate the rotation to land on the winning segment
+      // Each segment is 360/segments.length degrees
+      const segmentAngle = 360 / segments.length;
+      
+      // Rotate at least 5 full spins (1800 degrees) plus the offset to land on the segment
+      // We need to add 0.5 * segmentAngle to land in the middle of the segment
+      const targetRotation = 1800 + (winningSegmentIndex * segmentAngle) + (0.5 * segmentAngle);
+      
+      // Add some randomness to make it look more natural
+      const randomOffset = Math.random() * (segmentAngle * 0.7);
+      const finalRotation = rotation + targetRotation + randomOffset;
+      
+      setRotation(finalRotation);
       
       // Wait for animation to complete
       setTimeout(async () => {
@@ -132,33 +116,22 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
           ref={wheelRef}
           className="w-[300px] h-[300px] rounded-full overflow-hidden relative border-8 border-brunch-600"
           animate={{ rotate: rotation }}
-          transition={{ 
-            duration: 5, 
-            type: "spring", 
-            damping: 30,
-            ease: "easeOut"
-          }}
+          transition={{ duration: 5, type: "spring", damping: 30 }}
         >
           {segments.map((segment, index) => {
             const angle = 360 / segments.length;
-            const isHighlighted = selectedSegment === index && !isSpinning && result !== null;
-            
             return (
               <div
                 key={index}
-                className={`absolute w-full h-full origin-center ${isHighlighted ? 'z-10' : ''}`}
+                className="absolute w-full h-full origin-center"
                 style={{
                   transform: `rotate(${index * angle}deg)`,
                   clipPath: `polygon(50% 50%, 50% 0%, ${50 + 50 * Math.cos((angle * Math.PI) / 180)}% ${50 - 50 * Math.sin((angle * Math.PI) / 180)}%)`
                 }}
               >
                 <div 
-                  className={`w-full h-full flex items-center justify-center pt-6 ${isHighlighted ? 'ring-4 ring-yellow-400' : ''}`}
-                  style={{ 
-                    backgroundColor: segment.color, 
-                    transform: `rotate(${angle / 2}deg)`,
-                    transition: "all 0.3s ease"
-                  }}
+                  className="w-full h-full flex items-center justify-center pt-6"
+                  style={{ backgroundColor: segment.color, transform: `rotate(${angle / 2}deg)` }}
                 >
                   <p className="font-bold text-xs text-center text-brunch-800 transform -translate-y-20 rotate-90">
                     {segment.text}

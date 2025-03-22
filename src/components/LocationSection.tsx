@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { MapPin, Clock, Phone, ExternalLink } from 'lucide-react';
+import { MapPin, Navigation, Clock, Phone, ExternalLink } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const LocationSection = () => {
   return (
-    <section className="py-16 px-4 bg-gradient-to-b from-white to-brunch-50/30">
+    <section className="py-16 bg-gradient-to-b from-white to-brunch-50/30">
       <div className="container">
         <div className="text-center mb-12">
           <span className="inline-block px-4 py-2 rounded-full bg-brunch-100 text-brunch-700 font-medium text-sm animate-fade-down">
@@ -20,7 +20,7 @@ const LocationSection = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 items-center">
-          <div className="rounded-lg overflow-hidden shadow-lg animate-fade-up h-[300px] md:h-[400px]">
+          <div className="rounded-lg overflow-hidden shadow-lg animate-fade-up h-[400px]">
             <iframe
               title="Restaurant Location"
               className="w-full h-full border-0"

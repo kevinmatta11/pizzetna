@@ -12,17 +12,17 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="pt-16 pb-12 md:pt-24 md:pb-20 px-4 w-full overflow-x-hidden">
-        <div className="container mx-auto">
+      <section className="pt-32 pb-16 md:pt-40 md:pb-24">
+        <div className="container">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6 md:space-y-8 text-center lg:text-left">
+            <div className="space-y-8 text-center lg:text-left">
               <span className="inline-block px-4 py-2 rounded-full bg-brunch-100 text-brunch-700 font-medium text-sm animate-fade-down">
                 Premium Pizza Crafted with Love
               </span>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-brunch-900 leading-tight animate-fade-up">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-brunch-900 leading-tight animate-fade-up">
                 Discover the Art of <span className="text-brunch-500">Perfect Pizza</span>
               </h1>
-              <p className="text-base md:text-lg text-brunch-700 max-w-xl mx-auto lg:mx-0 animate-fade-up" style={{ animationDelay: '200ms' }}>
+              <p className="text-lg text-brunch-700 max-w-xl mx-auto lg:mx-0 animate-fade-up" style={{ animationDelay: '200ms' }}>
                 Experience the perfect blend of crispy crust, fresh ingredients, and artisanal toppings, crafted with passion in every slice.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 animate-fade-up" style={{ animationDelay: '400ms' }}>
@@ -35,7 +35,7 @@ const Index = () => {
                 </a>
               </div>
             </div>
-            <div className="relative max-w-sm mx-auto lg:max-w-none">
+            <div className="relative">
               <div className="aspect-square w-full max-w-lg mx-auto animate-float">
                 <div className="absolute inset-0 bg-brunch-500/10 rounded-full blur-3xl animate-pulse"></div>
                 <div className="relative z-10">
@@ -48,13 +48,13 @@ const Index = () => {
       </section>
       
       {/* Popular Items Section */}
-      <section id="popular" className="py-12 md:py-20 px-4 bg-brunch-50/30 w-full overflow-x-hidden">
-        <div className="container mx-auto">
-          <div className="text-center mb-10">
+      <section id="popular" className="section-padding bg-brunch-50/30">
+        <div className="container">
+          <div className="text-center mb-12">
             <span className="inline-block px-4 py-2 rounded-full bg-brunch-100 text-brunch-700 font-medium text-sm animate-fade-down">
               Customer Favorites
             </span>
-            <h2 className="text-2xl md:text-3xl font-display font-bold text-brunch-900 mt-4 animate-fade-up">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-brunch-900 mt-4 animate-fade-up">
               Our Most Popular <span className="text-brunch-500">Pizzas</span>
             </h2>
             <p className="text-brunch-700 max-w-2xl mx-auto mt-4 animate-fade-up">
@@ -73,7 +73,7 @@ const Index = () => {
         </div>
       </section>
       
-      {/* Location Section */}
+      {/* Location Section (replacing the Featured Section) */}
       <LocationSection />
       
       {/* Footer */}

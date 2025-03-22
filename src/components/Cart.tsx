@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { X, Minus, Plus, ShoppingCart, CreditCard, Trash2, TruckIcon, Check, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,16 +26,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Separator } from '@/components/ui/separator';
 import { PaymentForm } from '@/components/PaymentForm';
@@ -51,9 +40,8 @@ type CheckoutStep = 'cart' | 'delivery' | 'payment' | 'confirmation' | 'spin';
 type PaymentMethod = 'credit' | 'cash';
 
 export const Cart = () => {
-  const { items, removeItem, updateQuantity, clearCart, totalItems, totalPrice } = useCart();
+  const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryFormData | null>(null);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('cart');
@@ -61,10 +49,6 @@ export const Cart = () => {
   const [pointsApplied, setPointsApplied] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [orderId, setOrderId] = useState<string | null>(null);
-  const [showSpinDialog, setShowSpinDialog] = useState(false);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const handleCheckout = () => {
@@ -78,96 +62,63 @@ export const Cart = () => {
   };
 
   const handlePaymentSuccess = async () => {
+    if (!user) {
+      toast.error("You must be logged in to complete your order");
+      return;
+    }
+    
     try {
-      setIsProcessing(true);
-      setErrorMessage(null);
       const finalAmount = Math.max(0, totalPrice + 3.99 - discountAmount);
       
-      console.log("Creating order with amount:", finalAmount);
-      
-      // Create order without RLS
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
-          user_id: user?.id || null, // Allow null for non-logged in users
+          user_id: user.id,
           total_amount: finalAmount,
-          status: 'pending'
+          status: 'paid'
         })
         .select('id')
         .single();
       
       if (orderError) {
-        console.error("Order creation error:", orderError);
-        toast.error(`Order error: ${orderError.message}`);
-        setErrorMessage(`Order creation failed: ${orderError.message}`);
+        console.error("Order error:", orderError);
         throw orderError;
       }
       
       const newOrderId = orderData.id;
-      console.log("Order created with ID:", newOrderId);
-      setOrderId(newOrderId.toString());
+      setOrderId(newOrderId);
       
-      // Create order items
-      for (const item of items) {
+      const orderItems = items.map(item => ({
+        order_id: newOrderId,
+        price: item.price,
+        quantity: item.quantity,
+        menu_item_id: item.id.toString()
+      }));
+      
+      console.log("Submitting order items:", orderItems);
+      
+      for (const item of orderItems) {
         const { error: itemError } = await supabase
           .from('order_items')
-          .insert({
-            order_id: newOrderId,
-            price: item.price,
-            quantity: item.quantity,
-            menu_item_id: item.id
-          });
+          .insert(item);
         
         if (itemError) {
           console.error("Order item error:", itemError);
-          toast.error(`Item error: ${itemError.message}`);
-          setErrorMessage(`Order item failed: ${itemError.message}`);
+          console.error("Problematic item:", item);
           throw itemError;
         }
       }
       
-      // Apply loyalty points if user is logged in
-      if (user && pointsApplied > 0) {
+      if (pointsApplied > 0) {
         await loyaltyService.redeemPoints(pointsApplied, newOrderId);
       }
       
-      // Send admin notification
-      try {
-        await supabase.functions.invoke('admin-notification', {
-          body: {
-            orderId: newOrderId,
-            totalAmount: finalAmount,
-            userEmail: user?.email || 'Guest User',
-            items: items.map(item => ({
-              name: item.name,
-              quantity: item.quantity,
-              price: item.price
-            }))
-          }
-        });
-      } catch (notificationError) {
-        console.error("Error sending admin notification:", notificationError);
-        // Don't throw here, we don't want to fail the order if notification fails
-      }
-      
       toast.success("Your order has been placed successfully!");
-      setCheckoutStep('confirmation');
-      
-      // If user is logged in, ask if they want to spin the wheel
-      if (user) {
-        setShowSpinDialog(true);
-      } else {
-        // If user is not logged in, show login prompt dialog after a short delay
-        setTimeout(() => {
-          setShowLoginPrompt(true);
-        }, 1500);
-      }
-    } catch (error: any) {
+      setCheckoutStep('spin');
+    } catch (error) {
       console.error("Error creating order:", error);
-      toast.error(`There was a problem with your order: ${error.message}`);
-      setErrorMessage(`Order failed: ${error.message}`);
-    } finally {
-      setIsProcessing(false);
+      toast.error("There was a problem with your order. Please try again.");
+      setCheckoutStep('payment');
     }
   };
 
@@ -175,12 +126,8 @@ export const Cart = () => {
     handlePaymentSuccess();
   };
 
-  const handleSpinWheel = () => {
-    setShowSpinDialog(false);
-    setCheckoutStep('spin');
-  };
-
   const handleSpinComplete = (points: number) => {
+    setCheckoutStep('confirmation');
     setTimeout(() => {
       clearCart();
       setOpen(false);
@@ -189,36 +136,7 @@ export const Cart = () => {
       setPointsApplied(0);
       setDiscountAmount(0);
       setOrderId(null);
-      setShowSpinDialog(false);
-      setShowLoginPrompt(false);
     }, 3000);
-  };
-
-  const handleLoginRedirect = () => {
-    // Store spin intention in localStorage
-    localStorage.setItem('redirectAfterLogin', 'spin-wheel');
-    // Fix the TypeScript error by ensuring orderId is a string
-    localStorage.setItem('orderId', orderId ? orderId : '');
-    
-    // Navigate to auth page
-    navigate('/auth');
-    setOpen(false);
-  };
-
-  const skipSpin = () => {
-    setShowSpinDialog(false);
-    setShowLoginPrompt(false);
-    
-    // Clean up
-    setTimeout(() => {
-      clearCart();
-      setOpen(false);
-      setCheckoutStep('cart');
-      setDeliveryInfo(null);
-      setPointsApplied(0);
-      setDiscountAmount(0);
-      setOrderId(null);
-    }, 1000);
   };
 
   const handlePointsApplied = (points: number, discount: number) => {
@@ -229,12 +147,11 @@ export const Cart = () => {
 
   const finalTotal = Math.max(0, totalPrice + 3.99 - discountAmount).toFixed(2);
 
-  const CartTrigger = React.forwardRef<HTMLButtonElement, { children?: React.ReactNode }>((props, ref) => (
+  const CartTrigger = ({ children }: { children: React.ReactNode }) => (
     <Button 
       variant="outline" 
       className="relative p-2 bg-white border-brunch-200"
       onClick={() => setOpen(true)}
-      ref={ref}
     >
       <ShoppingCart className="h-5 w-5 text-brunch-700" />
       {totalItems > 0 && (
@@ -242,11 +159,9 @@ export const Cart = () => {
           {totalItems}
         </span>
       )}
-      {props.children}
+      {children}
     </Button>
-  ));
-  
-  CartTrigger.displayName = 'CartTrigger';
+  );
 
   const CartItems = () => (
     <div className="flex flex-col gap-4 py-4 overflow-auto max-h-[50vh]">
@@ -359,6 +274,97 @@ export const Cart = () => {
     </>
   );
 
+  const PaymentOptions = () => (
+    <div className="flex flex-col space-y-6">
+      <Button 
+        variant="ghost" 
+        className="mb-2" 
+        onClick={() => setCheckoutStep('delivery')}
+      >
+        <X className="h-4 w-4 mr-2" /> Back to delivery
+      </Button>
+      
+      <h3 className="text-lg font-medium">Select Payment Method</h3>
+      
+      <Tabs defaultValue="credit" onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}>
+        <TabsList className="grid grid-cols-2 mb-4">
+          <TabsTrigger value="credit">Credit Card</TabsTrigger>
+          <TabsTrigger value="cash">Cash on Delivery</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="credit">
+          <PaymentForm
+            totalAmount={(totalPrice + 3.99).toFixed(2)}
+            onSuccess={handlePaymentSuccess}
+          />
+        </TabsContent>
+        
+        <TabsContent value="cash">
+          <div className="space-y-4">
+            <div className="bg-brunch-50 p-4 rounded-md">
+              <h4 className="font-medium mb-2 flex items-center">
+                <TruckIcon className="h-4 w-4 mr-2" />
+                Cash on Delivery
+              </h4>
+              <p className="text-sm text-brunch-600">
+                Pay with cash when your order is delivered to your doorstep.
+              </p>
+            </div>
+            
+            <div className="py-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-brunch-600">Total Amount:</span>
+                <span className="font-bold">${(totalPrice + 3.99).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-brunch-600">Delivery Address:</span>
+              </div>
+              <div className="bg-brunch-50 p-3 rounded text-sm">
+                <p><strong>{deliveryInfo?.fullName}</strong></p>
+                <p>{deliveryInfo?.address}</p>
+                <p>{deliveryInfo?.city}, {deliveryInfo?.postalCode}</p>
+                <p>Phone: {deliveryInfo?.phone}</p>
+                {deliveryInfo?.notes && (
+                  <p className="mt-2"><strong>Notes:</strong> {deliveryInfo.notes}</p>
+                )}
+              </div>
+            </div>
+            
+            <Button
+              onClick={handleCashPayment}
+              className="w-full bg-brunch-500 hover:bg-brunch-600 text-white"
+            >
+              Place Order
+            </Button>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+
+  const OrderSpin = () => (
+    <div className="flex flex-col items-center py-4 text-center">
+      <h3 className="text-xl font-medium text-brunch-900 mb-6">Spin to Win Loyalty Points!</h3>
+      <SpinningWheel onComplete={handleSpinComplete} hasSpinAvailable={true} />
+    </div>
+  );
+
+  const OrderConfirmation = () => (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+        <Check className="h-8 w-8 text-green-600" />
+      </div>
+      <h3 className="text-xl font-medium text-brunch-900 mb-2">Order Placed Successfully!</h3>
+      <p className="text-sm text-brunch-600 mb-4">Thank you for your order</p>
+      {paymentMethod === 'cash' && (
+        <div className="bg-brunch-50 p-3 rounded-md text-sm text-left w-full mt-4">
+          <p className="font-medium">Please have the exact change ready:</p>
+          <p className="font-bold text-lg">${(totalPrice + 3.99).toFixed(2)}</p>
+        </div>
+      )}
+    </div>
+  );
+
   const renderStepContent = () => {
     switch (checkoutStep) {
       case 'delivery':
@@ -376,124 +382,11 @@ export const Cart = () => {
           </>
         );
       case 'payment':
-        return (
-          <div className="flex flex-col space-y-6">
-            <Button 
-              variant="ghost" 
-              className="mb-2" 
-              onClick={() => setCheckoutStep('delivery')}
-            >
-              <X className="h-4 w-4 mr-2" /> Back to delivery
-            </Button>
-            
-            <h3 className="text-lg font-medium">Select Payment Method</h3>
-            
-            <Tabs defaultValue="credit" onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}>
-              <TabsList className="grid grid-cols-2 mb-4">
-                <TabsTrigger value="credit">Credit Card</TabsTrigger>
-                <TabsTrigger value="cash">Cash on Delivery</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="credit">
-                {isProcessing ? (
-                  <div className="flex justify-center items-center py-8">
-                    <div className="animate-spin h-8 w-8 border-4 border-brunch-500 border-t-transparent rounded-full"></div>
-                    <span className="ml-3">Processing payment...</span>
-                  </div>
-                ) : (
-                  <>
-                    {errorMessage && (
-                      <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md mb-4 text-sm">
-                        {errorMessage}
-                      </div>
-                    )}
-                    <PaymentForm
-                      totalAmount={parseFloat(finalTotal)}
-                      onSuccess={handlePaymentSuccess}
-                    />
-                  </>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="cash">
-                <div className="space-y-4">
-                  <div className="bg-brunch-50 p-4 rounded-md">
-                    <h4 className="font-medium mb-2 flex items-center">
-                      <TruckIcon className="h-4 w-4 mr-2" />
-                      Cash on Delivery
-                    </h4>
-                    <p className="text-sm text-brunch-600">
-                      Pay with cash when your order is delivered to your doorstep.
-                    </p>
-                  </div>
-                  
-                  {errorMessage && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md mb-4 text-sm">
-                      {errorMessage}
-                    </div>
-                  )}
-                  
-                  <div className="py-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-brunch-600">Total Amount:</span>
-                      <span className="font-bold">${finalTotal}</span>
-                    </div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-brunch-600">Delivery Address:</span>
-                    </div>
-                    <div className="bg-brunch-50 p-3 rounded text-sm">
-                      <p><strong>{deliveryInfo?.fullName}</strong></p>
-                      <p>{deliveryInfo?.address}</p>
-                      <p>{deliveryInfo?.city}, {deliveryInfo?.postalCode}</p>
-                      <p>Phone: {deliveryInfo?.phone}</p>
-                      {deliveryInfo?.notes && (
-                        <p className="mt-2"><strong>Notes:</strong> {deliveryInfo.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <Button
-                    onClick={handleCashPayment}
-                    className="w-full bg-brunch-500 hover:bg-brunch-600 text-white"
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center">
-                        <span className="animate-spin h-4 w-4 mr-2 border-2 border-t-transparent rounded-full"></span>
-                        Processing...
-                      </span>
-                    ) : (
-                      'Place Order'
-                    )}
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        );
+        return <PaymentOptions />;
       case 'spin':
-        return (
-          <div className="flex flex-col items-center py-4 text-center">
-            <h3 className="text-xl font-medium text-brunch-900 mb-6">Spin to Win Loyalty Points!</h3>
-            <SpinningWheel onComplete={handleSpinComplete} hasSpinAvailable={true} />
-          </div>
-        );
+        return <OrderSpin />;
       case 'confirmation':
-        return (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <Check className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-medium text-brunch-900 mb-2">Order Placed Successfully!</h3>
-            <p className="text-sm text-brunch-600 mb-4">Thank you for your order</p>
-            {paymentMethod === 'cash' && (
-              <div className="bg-brunch-50 p-3 rounded-md text-sm text-left w-full mt-4">
-                <p className="font-medium">Please have the exact change ready:</p>
-                <p className="font-bold text-lg">${finalTotal}</p>
-              </div>
-            )}
-          </div>
-        );
+        return <OrderConfirmation />;
       default:
         return (
           <>
@@ -506,57 +399,25 @@ export const Cart = () => {
 
   if (isDesktop) {
     return (
-      <>
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <CartTrigger>
-              {totalItems > 0 && <span className="sr-only">Open cart ({totalItems} items)</span>}
-            </CartTrigger>
-          </SheetTrigger>
-          <SheetContent className="w-[350px] sm:w-[450px] flex flex-col overflow-hidden">
-            <SheetHeader>
-              <SheetTitle className="flex items-center">
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                {checkoutStep === 'cart' ? `Your Order ${totalItems > 0 ? `(${totalItems})` : ''}` : 'Checkout'}
-              </SheetTitle>
-            </SheetHeader>
-            
-            <div className="flex-1 overflow-auto">
-              {renderStepContent()}
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        <AlertDialog open={showSpinDialog} onOpenChange={setShowSpinDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Spin the Wheel?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Would you like to spin the wheel and earn loyalty points?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={skipSpin}>Skip</AlertDialogCancel>
-              <AlertDialogAction onClick={handleSpinWheel}>Spin Now</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Login to Earn Points</AlertDialogTitle>
-              <AlertDialogDescription>
-                Sign in or create an account to spin the wheel and earn loyalty points!
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={skipSpin}>Not Now</AlertDialogCancel>
-              <AlertDialogAction onClick={handleLoginRedirect}>Login</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <CartTrigger>
+            {totalItems > 0 && <span className="sr-only">Open cart ({totalItems} items)</span>}
+          </CartTrigger>
+        </SheetTrigger>
+        <SheetContent className="w-[350px] sm:w-[450px] flex flex-col">
+          <SheetHeader>
+            <SheetTitle className="flex items-center">
+              <ShoppingCart className="h-5 w-5 mr-2" />
+              {checkoutStep === 'cart' ? `Your Order ${totalItems > 0 ? `(${totalItems})` : ''}` : 'Checkout'}
+            </SheetTitle>
+          </SheetHeader>
+          
+          <div className="flex-1 overflow-auto">
+            {renderStepContent()}
+          </div>
+        </SheetContent>
+      </Sheet>
     );
   }
 
@@ -568,7 +429,7 @@ export const Cart = () => {
             {totalItems > 0 && <span className="sr-only">Open cart ({totalItems} items)</span>}
           </CartTrigger>
         </DrawerTrigger>
-        <DrawerContent className="px-4 max-h-[85vh]">
+        <DrawerContent className="px-4">
           <DrawerHeader className="text-left">
             <DrawerTitle className="flex items-center">
               <ShoppingCart className="h-5 w-5 mr-2" />
@@ -576,7 +437,7 @@ export const Cart = () => {
             </DrawerTitle>
           </DrawerHeader>
           
-          <div className="px-4 pb-8 overflow-y-auto">
+          <div className="px-4 pb-8">
             {renderStepContent()}
           </div>
           
@@ -589,36 +450,6 @@ export const Cart = () => {
           )}
         </DrawerContent>
       </Drawer>
-
-      <AlertDialog open={showSpinDialog} onOpenChange={setShowSpinDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Spin the Wheel?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Would you like to spin the wheel and earn loyalty points?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={skipSpin}>Skip</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSpinWheel}>Spin Now</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Login to Earn Points</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sign in or create an account to spin the wheel and earn loyalty points!
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={skipSpin}>Not Now</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLoginRedirect}>Login</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };

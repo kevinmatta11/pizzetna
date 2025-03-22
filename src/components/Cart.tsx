@@ -76,7 +76,7 @@ export const Cart = () => {
   const handleLoginRedirect = () => {
     // Store order ID in localStorage before redirecting
     if (orderId) {
-      localStorage.setItem('pendingOrderId', orderId);
+      localStorage.setItem('pendingOrderId', orderId.toString());
     }
     setLoginDialogOpen(false);
     setOpen(false);

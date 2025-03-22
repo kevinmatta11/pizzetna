@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,7 +51,7 @@ type CheckoutStep = 'cart' | 'delivery' | 'payment' | 'confirmation' | 'spin';
 type PaymentMethod = 'credit' | 'cash';
 
 export const Cart = () => {
-  const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart();
+  const { items, removeItem, updateQuantity, clearCart, totalItems, totalPrice } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -106,7 +105,7 @@ export const Cart = () => {
       
       const newOrderId = orderData.id;
       console.log("Order created with ID:", newOrderId);
-      setOrderId(newOrderId);
+      setOrderId(newOrderId.toString());
       
       // Create order items
       for (const item of items) {
@@ -199,7 +198,7 @@ export const Cart = () => {
     // Store spin intention in localStorage
     localStorage.setItem('redirectAfterLogin', 'spin-wheel');
     // Fix the TypeScript error by ensuring orderId is a string
-    localStorage.setItem('orderId', orderId ? orderId.toString() : '');
+    localStorage.setItem('orderId', orderId ? orderId : '');
     
     // Navigate to auth page
     navigate('/auth');
@@ -230,7 +229,6 @@ export const Cart = () => {
 
   const finalTotal = Math.max(0, totalPrice + 3.99 - discountAmount).toFixed(2);
 
-  // Fix: Correctly implement CartTrigger using React.forwardRef
   const CartTrigger = React.forwardRef<HTMLButtonElement, { children?: React.ReactNode }>((props, ref) => (
     <Button 
       variant="outline" 
@@ -250,7 +248,6 @@ export const Cart = () => {
   
   CartTrigger.displayName = 'CartTrigger';
 
-  // Cart Items Component
   const CartItems = () => (
     <div className="flex flex-col gap-4 py-4 overflow-auto max-h-[50vh]">
       {items.length === 0 ? (
@@ -302,7 +299,6 @@ export const Cart = () => {
     </div>
   );
 
-  // Cart Footer Component
   const CartFooter = () => (
     <>
       {items.length > 0 && (
@@ -508,7 +504,6 @@ export const Cart = () => {
     }
   };
 
-  // Desktop view with Sheet
   if (isDesktop) {
     return (
       <>
@@ -532,7 +527,6 @@ export const Cart = () => {
           </SheetContent>
         </Sheet>
 
-        {/* Spin Wheel Dialog */}
         <AlertDialog open={showSpinDialog} onOpenChange={setShowSpinDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -548,7 +542,6 @@ export const Cart = () => {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Login Prompt Dialog */}
         <AlertDialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -567,7 +560,6 @@ export const Cart = () => {
     );
   }
 
-  // Mobile view with Drawer
   return (
     <>
       <Drawer open={open} onOpenChange={setOpen}>
@@ -598,7 +590,6 @@ export const Cart = () => {
         </DrawerContent>
       </Drawer>
 
-      {/* Spin Wheel Dialog - Mobile */}
       <AlertDialog open={showSpinDialog} onOpenChange={setShowSpinDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -614,7 +605,6 @@ export const Cart = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Login Prompt Dialog - Mobile */}
       <AlertDialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -632,4 +622,3 @@ export const Cart = () => {
     </>
   );
 };
-

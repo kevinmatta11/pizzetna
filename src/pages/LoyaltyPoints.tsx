@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { loyaltyService, LoyaltyTransaction } from '@/services/loyaltyService';
 import { SpinningWheel } from '@/components/SpinningWheel';
 import { LoyaltyTransactionHistory } from '@/components/LoyaltyTransactionHistory';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -24,6 +24,19 @@ const LoyaltyPoints = () => {
   const [transactions, setTransactions] = useState<LoyaltyTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<string>("wheel");
+  
+  // Check if we should auto-focus on the wheel tab from URL params
+  const searchParams = new URLSearchParams(location.search);
+  const shouldAutoSpin = searchParams.get('spin') === 'true';
+  
+  useEffect(() => {
+    // If we should auto-spin, make sure the wheel tab is active
+    if (shouldAutoSpin) {
+      setActiveTab("wheel");
+    }
+  }, [shouldAutoSpin]);
   
   useEffect(() => {
     // If not authenticated, redirect to login
@@ -61,8 +74,7 @@ const LoyaltyPoints = () => {
   };
   
   // Check if the user has a pending spin (from recent order)
-  // This would be determined based on your business logic
-  // For now we'll just assume they do for demonstration
+  // For this implementation, we'll use the URL parameter to determine if they should spin
   const hasSpinAvailable = true;
   
   if (authLoading) {
@@ -143,7 +155,7 @@ const LoyaltyPoints = () => {
             </AlertDescription>
           </Alert>
           
-          <Tabs defaultValue="wheel" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="wheel" className="flex items-center">
                 <Gift className="h-4 w-4 mr-2" />

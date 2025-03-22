@@ -39,7 +39,6 @@ import { Separator } from '@/components/ui/separator';
 import { PaymentForm } from '@/components/PaymentForm';
 import { DeliveryForm, DeliveryFormData } from '@/components/DeliveryForm';
 import { PointsRedemptionForm } from '@/components/PointsRedemptionForm';
-import { SpinningWheel } from '@/components/SpinningWheel';
 import { supabase } from "@/integrations/supabase/client";
 import { loyaltyService } from '@/services/loyaltyService';
 import { toast } from 'sonner';
@@ -53,6 +52,7 @@ export const Cart = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [spinDialogOpen, setSpinDialogOpen] = useState(false);
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryFormData | null>(null);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('cart');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit');
@@ -81,6 +81,14 @@ export const Cart = () => {
     setLoginDialogOpen(false);
     setOpen(false);
     navigate('/auth');
+  };
+
+  const handleSpinRedirect = () => {
+    setSpinDialogOpen(false);
+    setOpen(false);
+    clearCart();
+    // Navigate to the loyalty page with a query parameter indicating we want to auto-spin
+    navigate('/loyalty?spin=true');
   };
 
   const handlePaymentSuccess = async () => {
@@ -120,9 +128,10 @@ export const Cart = () => {
       
       toast.success("Your order has been placed successfully!");
       
-      // Only show spin wheel dialog for authenticated users
+      // Only show spin dialog for authenticated users
       if (user) {
-        setCheckoutStep('spin');
+        setCheckoutStep('confirmation');
+        setSpinDialogOpen(true);
       } else {
         // For anonymous users, ask if they want to log in for rewards
         setCheckoutStep('confirmation');
@@ -139,19 +148,6 @@ export const Cart = () => {
 
   const handleCashPayment = () => {
     handlePaymentSuccess();
-  };
-
-  const handleSpinComplete = (points: number) => {
-    setCheckoutStep('confirmation');
-    setTimeout(() => {
-      clearCart();
-      setOpen(false);
-      setCheckoutStep('cart');
-      setDeliveryInfo(null);
-      setPointsApplied(0);
-      setDiscountAmount(0);
-      setOrderId(null);
-    }, 3000);
   };
 
   const handlePointsApplied = (points: number, discount: number) => {
@@ -362,12 +358,51 @@ export const Cart = () => {
     </div>
   );
 
-  const OrderSpin = () => (
-    <div className="flex flex-col items-center py-4 text-center">
-      <h3 className="text-xl font-medium text-brunch-900 mb-6">Spin to Win Loyalty Points!</h3>
-      <SpinningWheel onComplete={handleSpinComplete} hasSpinAvailable={true} />
+  const OrderConfirmation = () => (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+        <Check className="h-8 w-8 text-green-600" />
+      </div>
+      <h3 className="text-xl font-medium text-brunch-900 mb-2">Order Placed Successfully!</h3>
+      <p className="text-sm text-brunch-600 mb-4">Thank you for your order</p>
+      {paymentMethod === 'cash' && (
+        <div className="bg-brunch-50 p-3 rounded-md text-sm text-left w-full mt-4">
+          <p className="font-medium">Please have the exact change ready:</p>
+          <p className="font-bold text-lg">${finalTotal}</p>
+        </div>
+      )}
     </div>
   );
+
+  const renderStepContent = () => {
+    switch (checkoutStep) {
+      case 'delivery':
+        return (
+          <>
+            <Button 
+              variant="ghost" 
+              className="mb-4" 
+              onClick={() => setCheckoutStep('cart')}
+            >
+              <X className="h-4 w-4 mr-2" /> Back to cart
+            </Button>
+            <h3 className="text-lg font-medium mb-4">Delivery Information</h3>
+            <DeliveryForm onSubmit={handleDeliverySubmit} />
+          </>
+        );
+      case 'payment':
+        return <PaymentOptions />;
+      case 'confirmation':
+        return <OrderConfirmation />;
+      default:
+        return (
+          <>
+            <CartItems />
+            <CartFooter />
+          </>
+        );
+    }
+  };
 
   const LoginPrompt = () => (
     <Dialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen}>
@@ -412,53 +447,47 @@ export const Cart = () => {
     </Dialog>
   );
 
-  const OrderConfirmation = () => (
-    <div className="flex flex-col items-center justify-center py-8 text-center">
-      <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-        <Check className="h-8 w-8 text-green-600" />
-      </div>
-      <h3 className="text-xl font-medium text-brunch-900 mb-2">Order Placed Successfully!</h3>
-      <p className="text-sm text-brunch-600 mb-4">Thank you for your order</p>
-      {paymentMethod === 'cash' && (
-        <div className="bg-brunch-50 p-3 rounded-md text-sm text-left w-full mt-4">
-          <p className="font-medium">Please have the exact change ready:</p>
-          <p className="font-bold text-lg">${finalTotal}</p>
+  const SpinPrompt = () => (
+    <Dialog open={spinDialogOpen} onOpenChange={setSpinDialogOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Spin to Win Rewards!</DialogTitle>
+          <DialogDescription>
+            Congratulations on your order! Spin the wheel to win loyalty points.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col items-center justify-center py-4 text-center">
+          <div className="h-16 w-16 bg-brunch-100 rounded-full flex items-center justify-center mb-4">
+            <Coins className="h-8 w-8 text-brunch-600" />
+          </div>
+          <p className="text-sm text-brunch-600 mb-4">
+            Would you like to spin the wheel now to earn loyalty points?
+          </p>
         </div>
-      )}
-    </div>
+        <DialogFooter className="sm:justify-center gap-2 flex-col sm:flex-row">
+          <Button
+            variant="default"
+            className="bg-brunch-500 hover:bg-brunch-600"
+            onClick={handleSpinRedirect}
+          >
+            Spin the Wheel
+          </Button>
+          <Button
+            variant="outline"
+            className="border-brunch-200"
+            onClick={() => {
+              setSpinDialogOpen(false);
+              clearCart();
+              setOpen(false);
+              setCheckoutStep('cart');
+            }}
+          >
+            Maybe later
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
-
-  const renderStepContent = () => {
-    switch (checkoutStep) {
-      case 'delivery':
-        return (
-          <>
-            <Button 
-              variant="ghost" 
-              className="mb-4" 
-              onClick={() => setCheckoutStep('cart')}
-            >
-              <X className="h-4 w-4 mr-2" /> Back to cart
-            </Button>
-            <h3 className="text-lg font-medium mb-4">Delivery Information</h3>
-            <DeliveryForm onSubmit={handleDeliverySubmit} />
-          </>
-        );
-      case 'payment':
-        return <PaymentOptions />;
-      case 'spin':
-        return <OrderSpin />;
-      case 'confirmation':
-        return <OrderConfirmation />;
-      default:
-        return (
-          <>
-            <CartItems />
-            <CartFooter />
-          </>
-        );
-    }
-  };
 
   return (
     <>
@@ -514,6 +543,9 @@ export const Cart = () => {
       
       {/* Login dialog that appears after checkout for non-authenticated users */}
       <LoginPrompt />
+      
+      {/* Spin wheel dialog for authenticated users */}
+      <SpinPrompt />
     </>
   );
 };

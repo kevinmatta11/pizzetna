@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -138,10 +137,6 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
             const angle = 360 / segments.length;
             const rotation = index * angle;
             
-            // Calculate position for text to be more centered in the segment
-            const textRadiusPercentage = 75; // Position text at 75% of the radius
-            const textRotationAdjustment = angle / 2;
-
             return (
               <div
                 key={index}
@@ -150,6 +145,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
                   transform: `rotate(${rotation}deg)`
                 }}
               >
+                {/* Segment background */}
                 <div
                   className="absolute w-1/2 h-full"
                   style={{
@@ -159,26 +155,28 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
                     clipPath: `polygon(100% 0, 100% 100%, 0% 50%)`,
                     boxShadow: 'inset 0 0 5px rgba(0,0,0,0.1)'
                   }}
+                />
+                
+                {/* Segment content - Positioned with absolute values for better visibility */}
+                <div 
+                  className="absolute flex flex-col items-center justify-center"
+                  style={{
+                    top: '25%',
+                    right: '25%',
+                    width: '120px',
+                    height: '40px',
+                    transform: `rotate(${angle / 2}deg)`,
+                    transformOrigin: 'right center'
+                  }}
                 >
-                  <div
-                    className="absolute flex flex-col items-center"
-                    style={{
-                      top: `${textRadiusPercentage / 2}%`, 
-                      right: `${textRadiusPercentage}%`,
-                      transform: `rotate(-${textRotationAdjustment}deg) translateX(50%) translateY(-50%)`,
-                      width: '100px'
-                    }}
-                  >
-                    <div className="text-2xl mb-1">{segment.icon}</div>
-                    <div 
-                      className="text-center text-xs font-bold text-brunch-800"
-                      style={{
-                        textShadow: '1px 1px 2px white, -1px -1px 2px white',
-                        maxWidth: '80px'
-                      }}
-                    >
+                  <div className="flex flex-col items-center bg-white bg-opacity-60 rounded-md px-2 py-1 shadow-sm">
+                    <span className="text-xl">{segment.icon}</span>
+                    <span className="font-bold text-xs text-brunch-800 text-center" style={{ 
+                      textShadow: '0px 0px 2px white',
+                      whiteSpace: 'nowrap'
+                    }}>
                       {segment.text}
-                    </div>
+                    </span>
                   </div>
                 </div>
               </div>

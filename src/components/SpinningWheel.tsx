@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -121,12 +122,12 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
       </div>
       
       <div className="relative">
-        {/* Improved pointer */}
+        {/* Pointer */}
         <div className="absolute top-[-25px] left-1/2 transform -translate-x-1/2 z-10">
           <div className="w-0 h-0 border-l-[18px] border-r-[18px] border-t-[35px] border-l-transparent border-r-transparent border-t-brunch-600 drop-shadow-md" />
         </div>
 
-        {/* Wheel with fixed segments */}
+        {/* Wheel */}
         <motion.div
           ref={wheelRef}
           className="w-[320px] h-[320px] rounded-full overflow-hidden relative border-[10px] border-brunch-600 shadow-lg"
@@ -134,53 +135,80 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
           transition={{ duration: 5, type: "spring", damping: 30 }}
           style={{ transform: `rotate(${rotation}deg)` }}
         >
-          {segments.map((segment, index) => {
-            const angle = 360 / segments.length;
-            const skewAngle = 90 - angle;
-            const rotation = index * angle;
-            
-            return (
-              <div
-                key={index}
-                className="absolute top-0 left-0 w-full h-full"
-                style={{ transform: `rotate(${rotation}deg)` }}
-              >
-                {/* Segment wedge */}
-                <div
-                  className="absolute top-0 right-0 w-1/2 h-full"
-                  style={{
-                    backgroundColor: segment.color,
-                    transformOrigin: 'left center',
-                    transform: `skewY(${skewAngle}deg)`,
-                    clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
-                    borderRight: '1px solid rgba(0,0,0,0.1)'
-                  }}
-                />
-                
-                {/* Text and icon container */}
-                <div
-                  className="absolute"
-                  style={{
-                    width: '80px',
-                    top: '35px',
-                    right: '35px',
-                    transform: `rotate(${angle/2}deg)`,
-                    transformOrigin: 'left bottom'
-                  }}
-                >
-                  <div className="flex flex-col items-center p-1 rounded-md bg-white bg-opacity-70 shadow-sm">
-                    <div className="text-xl">{segment.icon}</div>
-                    <div className="text-xs font-bold text-brunch-800 whitespace-nowrap">
+          {/* SVG for precise wheel segments */}
+          <svg width="100%" height="100%" viewBox="0 0 100 100" className="absolute inset-0">
+            <defs>
+              <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="0" stdDeviation="2" floodOpacity="0.3" />
+              </filter>
+            </defs>
+            {segments.map((segment, index) => {
+              const angle = 360 / segments.length;
+              const startAngle = index * angle - 90; // Start at top
+              const endAngle = (index + 1) * angle - 90;
+              
+              // Convert angles to radians
+              const startRad = (startAngle * Math.PI) / 180;
+              const endRad = (endAngle * Math.PI) / 180;
+              
+              // Calculate points for the segment path
+              const x1 = 50 + 50 * Math.cos(startRad);
+              const y1 = 50 + 50 * Math.sin(startRad);
+              const x2 = 50 + 50 * Math.cos(endRad);
+              const y2 = 50 + 50 * Math.sin(endRad);
+              
+              // Create segment path
+              const largeArcFlag = angle > 180 ? 1 : 0;
+              const path = `M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+              
+              // Calculate position for text
+              const textAngle = (startAngle + endAngle) / 2;
+              const textRad = (textAngle * Math.PI) / 180;
+              const textDistance = 35; // Distance from center (0-50)
+              const textX = 50 + textDistance * Math.cos(textRad);
+              const textY = 50 + textDistance * Math.sin(textRad);
+              
+              return (
+                <g key={index}>
+                  {/* Segment */}
+                  <path
+                    d={path}
+                    fill={segment.color}
+                    stroke="rgba(0,0,0,0.1)"
+                    strokeWidth="0.5"
+                  />
+                  
+                  {/* Text container */}
+                  <g
+                    transform={`translate(${textX}, ${textY}) rotate(${textAngle + 90})`}
+                    textAnchor="middle"
+                  >
+                    {/* Background for text */}
+                    <rect
+                      x="-20"
+                      y="-12"
+                      width="40"
+                      height="24"
+                      rx="4"
+                      fill="white"
+                      fillOpacity="0.85"
+                      filter="url(#shadow)"
+                    />
+                    
+                    {/* Icon */}
+                    <text y="-2" fontSize="8" textAnchor="middle">
+                      {segment.icon}
+                    </text>
+                    
+                    {/* Text */}
+                    <text y="7" fontSize="5" fontWeight="bold" textAnchor="middle">
                       {segment.text}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          
-          {/* Overlay for smooth edge */}
-          <div className="absolute inset-0 rounded-full pointer-events-none border border-gray-200" />
+                    </text>
+                  </g>
+                </g>
+              );
+            })}
+          </svg>
         </motion.div>
 
         {/* Center button */}

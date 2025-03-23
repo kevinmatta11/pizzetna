@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -48,6 +49,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
   const [result, setResult] = useState<number | null>(null);
   const [hasPendingSpin, setHasPendingSpin] = useState(true);
   const [winAnimation, setWinAnimation] = useState(false);
+  const [winningSegmentIndex, setWinningSegmentIndex] = useState<number | null>(null);
   const wheelRef = useRef<HTMLDivElement>(null);
   
   // Check if user has a pending spin from URL parameter
@@ -71,18 +73,21 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
     setIsSpinning(true);
     setResult(null);
     setWinAnimation(false);
+    setWinningSegmentIndex(null);
 
     try {
-      const winningSegmentIndex = getWeightedRandomSegment();
+      const selectedSegmentIndex = getWeightedRandomSegment();
+      setWinningSegmentIndex(selectedSegmentIndex);
+      
       const segmentAngle = 360 / segments.length;
-      const targetRotation = 1800 + (winningSegmentIndex * segmentAngle) + (0.5 * segmentAngle);
+      const targetRotation = 1800 + (selectedSegmentIndex * segmentAngle) + (0.5 * segmentAngle);
       const randomOffset = Math.random() * (segmentAngle * 0.7);
       const finalRotation = rotation + targetRotation + randomOffset;
 
       setRotation(finalRotation);
 
       setTimeout(async () => {
-        const points = segments[winningSegmentIndex].value;
+        const points = segments[selectedSegmentIndex].value;
         setResult(points);
         
         if (points > 0) {
@@ -238,14 +243,14 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
       </Button>
 
       {/* Result display */}
-      {result !== null && (
+      {result !== null && winningSegmentIndex !== null && (
         <motion.div 
           className="mt-4 text-center p-4 rounded-lg bg-white shadow-md border border-brunch-100"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          {result > 0 ? (
+          {segments[winningSegmentIndex].value > 0 ? (
             <div className="flex flex-col items-center">
               <motion.div
                 animate={winAnimation ? { scale: [1, 1.2, 1] } : {}}
@@ -257,7 +262,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
                 Congratulations!
               </h3>
               <p className="text-brunch-600">
-                You won <span className="font-bold text-brunch-700">{result} points</span>!
+                You won <span className="font-bold text-brunch-700">{segments[winningSegmentIndex].value} points</span>!
               </p>
             </div>
           ) : (

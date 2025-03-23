@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -139,7 +138,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
           <svg width="100%" height="100%" viewBox="0 0 100 100" className="absolute inset-0">
             <defs>
               <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="0" stdDeviation="2" floodOpacity="0.3" />
+                <feDropShadow dx="0" dy="0" stdDeviation="1" floodOpacity="0.2" />
               </filter>
             </defs>
             {segments.map((segment, index) => {
@@ -164,7 +163,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
               // Calculate position for text
               const textAngle = (startAngle + endAngle) / 2;
               const textRad = (textAngle * Math.PI) / 180;
-              const textDistance = 35; // Distance from center (0-50)
+              const textDistance = 32; // Distance from center (0-50)
               const textX = 50 + textDistance * Math.cos(textRad);
               const textY = 50 + textDistance * Math.sin(textRad);
               
@@ -178,30 +177,19 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
                     strokeWidth="0.5"
                   />
                   
-                  {/* Text container */}
+                  {/* Text positioned directly on segment without background */}
                   <g
                     transform={`translate(${textX}, ${textY}) rotate(${textAngle + 90})`}
                     textAnchor="middle"
                   >
-                    {/* Background for text */}
-                    <rect
-                      x="-20"
-                      y="-12"
-                      width="40"
-                      height="24"
-                      rx="4"
-                      fill="white"
-                      fillOpacity="0.85"
+                    <text 
+                      fontSize="4.5" 
+                      fontWeight="bold" 
+                      textAnchor="middle" 
+                      fill="#333"
                       filter="url(#shadow)"
-                    />
-                    
-                    {/* Icon */}
-                    <text y="-2" fontSize="8" textAnchor="middle">
-                      {segment.icon}
-                    </text>
-                    
-                    {/* Text */}
-                    <text y="7" fontSize="5" fontWeight="bold" textAnchor="middle">
+                      style={{ textShadow: "0px 0px 2px rgba(255,255,255,0.8)" }}
+                    >
                       {segment.text}
                     </text>
                   </g>

@@ -126,65 +126,64 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
           <div className="w-0 h-0 border-l-[18px] border-r-[18px] border-t-[35px] border-l-transparent border-r-transparent border-t-brunch-600 drop-shadow-md" />
         </div>
 
-        {/* Wheel with enhanced visual appeal */}
+        {/* Wheel with fixed segments */}
         <motion.div
           ref={wheelRef}
           className="w-[320px] h-[320px] rounded-full overflow-hidden relative border-[10px] border-brunch-600 shadow-lg"
           animate={{ rotate: rotation }}
           transition={{ duration: 5, type: "spring", damping: 30 }}
+          style={{ transform: `rotate(${rotation}deg)` }}
         >
           {segments.map((segment, index) => {
             const angle = 360 / segments.length;
+            const skewAngle = 90 - angle;
             const rotation = index * angle;
             
             return (
               <div
                 key={index}
-                className="absolute w-full h-full origin-center"
-                style={{
-                  transform: `rotate(${rotation}deg)`
-                }}
+                className="absolute top-0 left-0 w-full h-full"
+                style={{ transform: `rotate(${rotation}deg)` }}
               >
-                {/* Segment background */}
+                {/* Segment wedge */}
                 <div
-                  className="absolute w-1/2 h-full"
+                  className="absolute top-0 right-0 w-1/2 h-full"
                   style={{
                     backgroundColor: segment.color,
-                    transform: `skewY(-${90 - angle}deg) rotate(${angle / 2}deg)`,
-                    transformOrigin: '100% 50%',
-                    clipPath: `polygon(100% 0, 100% 100%, 0% 50%)`,
-                    boxShadow: 'inset 0 0 5px rgba(0,0,0,0.1)'
+                    transformOrigin: 'left center',
+                    transform: `skewY(${skewAngle}deg)`,
+                    clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
+                    borderRight: '1px solid rgba(0,0,0,0.1)'
                   }}
                 />
                 
-                {/* Segment content - Positioned with absolute values for better visibility */}
-                <div 
-                  className="absolute flex flex-col items-center justify-center"
+                {/* Text and icon container */}
+                <div
+                  className="absolute"
                   style={{
-                    top: '25%',
-                    right: '25%',
-                    width: '120px',
-                    height: '40px',
-                    transform: `rotate(${angle / 2}deg)`,
-                    transformOrigin: 'right center'
+                    width: '80px',
+                    top: '35px',
+                    right: '35px',
+                    transform: `rotate(${angle/2}deg)`,
+                    transformOrigin: 'left bottom'
                   }}
                 >
-                  <div className="flex flex-col items-center bg-white bg-opacity-60 rounded-md px-2 py-1 shadow-sm">
-                    <span className="text-xl">{segment.icon}</span>
-                    <span className="font-bold text-xs text-brunch-800 text-center" style={{ 
-                      textShadow: '0px 0px 2px white',
-                      whiteSpace: 'nowrap'
-                    }}>
+                  <div className="flex flex-col items-center p-1 rounded-md bg-white bg-opacity-70 shadow-sm">
+                    <div className="text-xl">{segment.icon}</div>
+                    <div className="text-xs font-bold text-brunch-800 whitespace-nowrap">
                       {segment.text}
-                    </span>
+                    </div>
                   </div>
                 </div>
               </div>
             );
           })}
+          
+          {/* Overlay for smooth edge */}
+          <div className="absolute inset-0 rounded-full pointer-events-none border border-gray-200" />
         </motion.div>
 
-        {/* Enhanced center button with subtle animation */}
+        {/* Center button */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-brunch-600 flex items-center justify-center shadow-md">
           <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center">
             <span className="text-brunch-800 font-bold text-sm flex items-center">
@@ -198,7 +197,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
         </div>
       </div>
 
-      {/* Improved spin button */}
+      {/* Spin button */}
       <Button
         onClick={spinWheel}
         disabled={isSpinning || !hasPendingSpin}
@@ -222,7 +221,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
         )}
       </Button>
 
-      {/* Enhanced result display with animation */}
+      {/* Result display */}
       {result !== null && (
         <motion.div 
           className="mt-4 text-center p-4 rounded-lg bg-white shadow-md border border-brunch-100"

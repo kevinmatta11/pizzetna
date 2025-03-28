@@ -10,11 +10,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
-  Search, Edit, UserPlus, Users, ArrowUpDown, ArrowUp, ArrowDown, 
-  CheckCircle, AlertCircle
+  Search, Edit, ArrowUpDown, ArrowUp, ArrowDown, 
+  AlertCircle, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 type UserWithLoyalty = {
   id: string;
@@ -25,8 +26,10 @@ type UserWithLoyalty = {
 };
 
 const AdminUsers = () => {
+  const { user } = useAuth();
   const [users, setUsers] = useState<UserWithLoyalty[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -39,49 +42,96 @@ const AdminUsers = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
+      setError(null);
+      
       try {
-        // Fetch users
-        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        console.log("Starting to fetch users...");
         
+        // Get all users from auth.users table via RPC function
+        const { data: authData, error: authError } = await supabase
+          .from('profiles')
+          .select('id, created_at');
+          
         if (authError) throw authError;
         
-        // Fetch loyalty points for each user
-        const loyaltyPromises = authUsers.users.map(async (user) => {
-          const { data, error } = await supabase.rpc(
-            'get_user_points_balance',
-            { user_uuid: user.id }
-          );
-          
-          if (error) {
-            console.error("Error fetching points for user:", user.id, error);
-            return 0;
-          }
-          
-          return data || 0;
-        });
+        console.log("Retrieved profiles:", authData);
         
-        const loyaltyPoints = await Promise.all(loyaltyPromises);
+        if (!authData || authData.length === 0) {
+          console.log("No users found in profiles");
+          setUsers([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Get the user email addresses
+        const userEmails: Record<string, any> = {};
+        for (const profile of authData) {
+          // Try to get user email from auth
+          try {
+            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(profile.id);
+            
+            if (!userError && userData && userData.user) {
+              userEmails[profile.id] = {
+                email: userData.user.email || "Unknown",
+                last_sign_in_at: userData.user.last_sign_in_at
+              };
+            } else {
+              userEmails[profile.id] = { email: "Unknown", last_sign_in_at: null };
+            }
+          } catch (error) {
+            console.error("Error fetching user email:", error);
+            userEmails[profile.id] = { email: "Unknown", last_sign_in_at: null };
+          }
+        }
+        
+        console.log("Retrieved user emails");
+        
+        // Fetch loyalty points for each user
+        const userPoints: Record<string, number> = {};
+        
+        for (const profile of authData) {
+          try {
+            const { data: pointsData, error: pointsError } = await supabase.rpc(
+              'get_user_points_balance',
+              { user_uuid: profile.id }
+            );
+            
+            if (pointsError) throw pointsError;
+            
+            userPoints[profile.id] = pointsData || 0;
+          } catch (error) {
+            console.error("Error fetching points for user:", profile.id, error);
+            userPoints[profile.id] = 0;
+          }
+        }
+        
+        console.log("Retrieved user points");
         
         // Combine user data with loyalty points
-        const usersWithLoyalty: UserWithLoyalty[] = authUsers.users.map((user, index) => ({
-          id: user.id,
-          email: user.email || "No Email",
-          created_at: user.created_at,
-          last_sign_in_at: user.last_sign_in_at,
-          points_balance: loyaltyPoints[index]
+        const usersWithData: UserWithLoyalty[] = authData.map(profile => ({
+          id: profile.id,
+          email: userEmails[profile.id]?.email || "Unknown Email",
+          created_at: profile.created_at,
+          last_sign_in_at: userEmails[profile.id]?.last_sign_in_at || null,
+          points_balance: userPoints[profile.id] || 0
         }));
         
-        setUsers(usersWithLoyalty);
+        console.log("Combined user data:", usersWithData);
+        
+        setUsers(usersWithData);
       } catch (error: any) {
         console.error("Error fetching users:", error);
+        setError(error.message || "Failed to load users");
         toast.error("Failed to load users");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
-  }, []);
+    if (user) {
+      fetchUsers();
+    }
+  }, [user]);
 
   // Handle adjusting user points
   const handleAdjustPoints = async () => {
@@ -197,6 +247,21 @@ const AdminUsers = () => {
         </div>
       </div>
 
+      {/* Error message if needed */}
+      {error && (
+        <div className="mb-6 p-4 border border-red-200 bg-red-50 rounded-md flex items-start gap-3 text-red-700">
+          <AlertCircle className="h-5 w-5 mt-0.5" />
+          <div>
+            <p className="font-medium">Error loading users</p>
+            <p className="text-sm mt-1">{error}</p>
+            <p className="text-sm mt-2">
+              To fix this issue, make sure your Supabase admin settings are properly configured and you have
+              the correct permissions.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Users Table */}
       <div className="rounded-md border">
         <Table>
@@ -228,14 +293,23 @@ const AdminUsers = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  Loading users...
+                <TableCell colSpan={5} className="text-center py-8 h-[200px]">
+                  <div className="flex flex-col items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
+                    <span className="text-muted-foreground">Loading users...</span>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  No users found.
+                <TableCell colSpan={5} className="text-center py-8 h-[200px]">
+                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                    <AlertCircle className="h-8 w-8 mb-2" />
+                    <p>No users found</p>
+                    <p className="text-sm mt-1">
+                      {searchQuery ? "Try a different search term" : "There are no users in the system yet"}
+                    </p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (

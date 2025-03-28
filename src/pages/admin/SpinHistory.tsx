@@ -8,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
   Search, ArrowUpDown, ArrowUp, ArrowDown,
-  Calendar, Download
+  Download, Loader2, AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SpinRecord = {
   id: string;
@@ -26,8 +27,10 @@ type SpinRecord = {
 };
 
 const AdminSpinHistory = () => {
+  const { user } = useAuth();
   const [spinHistory, setSpinHistory] = useState<SpinRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -36,9 +39,15 @@ const AdminSpinHistory = () => {
   // Fetch spin history on load
   useEffect(() => {
     const fetchSpinHistory = async () => {
+      if (!user) return;
+      
       setLoading(true);
+      setError(null);
+      
       try {
-        // Fetch spin history
+        console.log("Fetching spin history...");
+        
+        // Fetch spin history from loyalty_transactions table
         const { data: spinData, error: spinError } = await supabase
           .from('loyalty_transactions')
           .select('*')
@@ -47,17 +56,39 @@ const AdminSpinHistory = () => {
         
         if (spinError) throw spinError;
         
-        // Fetch user emails for each record
-        const userIds = [...new Set(spinData.map(record => record.user_id))];
-        const userEmails: Record<string, string> = {};
+        console.log("Spin data retrieved:", spinData?.length || 0, "records");
         
-        for (const userId of userIds) {
-          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-          
-          if (!userError && userData.user) {
-            userEmails[userId] = userData.user.email || "Unknown";
+        if (!spinData || spinData.length === 0) {
+          setSpinHistory([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Map user IDs to email addresses
+        const userEmails: Record<string, string> = {};
+        const uniqueUserIds = [...new Set(spinData.map(record => record.user_id))];
+        
+        console.log("Unique user IDs:", uniqueUserIds.length);
+        
+        // Get user emails
+        for (const userId of uniqueUserIds) {
+          try {
+            // First try to get the user from auth.users (admin only)
+            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+            
+            if (!userError && userData && userData.user) {
+              userEmails[userId] = userData.user.email || "Unknown Email";
+            } else {
+              // Fallback: try to get basic info from public profiles table
+              userEmails[userId] = `User ${userId.substring(0, 8)}`;
+            }
+          } catch (error) {
+            console.error("Error fetching user data:", error);
+            userEmails[userId] = `User ${userId.substring(0, 8)}`;
           }
         }
+        
+        console.log("User emails retrieved");
         
         // Combine spin data with user emails
         const spinRecords: SpinRecord[] = spinData.map(record => ({
@@ -65,9 +96,12 @@ const AdminSpinHistory = () => {
           user_email: userEmails[record.user_id] || "Unknown User"
         }));
         
+        console.log("Combined spin records:", spinRecords.length);
+        
         setSpinHistory(spinRecords);
       } catch (error: any) {
         console.error("Error fetching spin history:", error);
+        setError(error.message || "Failed to load spin history");
         toast.error("Failed to load spin history");
       } finally {
         setLoading(false);
@@ -75,7 +109,7 @@ const AdminSpinHistory = () => {
     };
 
     fetchSpinHistory();
-  }, []);
+  }, [user]);
 
   // Handle exporting data to CSV
   const handleExport = () => {
@@ -187,11 +221,27 @@ const AdminSpinHistory = () => {
         <Button
           onClick={handleExport}
           className="mt-4 md:mt-0"
+          disabled={filteredSpinHistory.length === 0}
         >
           <Download className="h-4 w-4 mr-2" />
           Export CSV
         </Button>
       </div>
+
+      {/* Error message if needed */}
+      {error && (
+        <div className="mb-6 p-4 border border-red-200 bg-red-50 rounded-md flex items-start gap-3 text-red-700">
+          <AlertCircle className="h-5 w-5 mt-0.5" />
+          <div>
+            <p className="font-medium">Error loading spin history</p>
+            <p className="text-sm mt-1">{error}</p>
+            <p className="text-sm mt-2">
+              To fix this issue, make sure your Supabase admin settings are properly configured and you have
+              the correct permissions.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-center mb-6">
@@ -237,14 +287,25 @@ const AdminSpinHistory = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
-                  Loading spin history...
+                <TableCell colSpan={4} className="text-center py-8 h-[200px]">
+                  <div className="flex flex-col items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
+                    <span className="text-muted-foreground">Loading spin history...</span>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : filteredSpinHistory.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
-                  No spin history found.
+                <TableCell colSpan={4} className="text-center py-8 h-[200px]">
+                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                    <AlertCircle className="h-8 w-8 mb-2" />
+                    <p>No spin history found</p>
+                    <p className="text-sm mt-1">
+                      {searchQuery || dateRange ? 
+                        "Try changing your search filters" : 
+                        "No users have spun the wheel yet"}
+                    </p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (

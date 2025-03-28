@@ -11,7 +11,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import LoyaltyPoints from "./pages/LoyaltyPoints";
 import Addresses from "./pages/Addresses";
-import SpinWheel from "./pages/SpinWheel";
+import SpinWheel from "./pages/SpinWheel"; // Fix: Import SpinWheel component properly
 import { CartProvider } from "./contexts/CartContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./contexts/AuthContext";

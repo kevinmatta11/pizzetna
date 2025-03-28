@@ -13,10 +13,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
-  Search, Eye, ArrowUpDown, ArrowUp, ArrowDown
+  Search, Eye, ArrowUpDown, ArrowUp, ArrowDown,
+  Loader2, AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Order = {
   id: string;
@@ -39,8 +41,10 @@ type OrderItem = {
 };
 
 const AdminOrders = () => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [sortField, setSortField] = useState<string>("created_at");
@@ -53,45 +57,81 @@ const AdminOrders = () => {
   // Fetch orders on load
   useEffect(() => {
     const fetchOrders = async () => {
+      if (!user) return;
+      
       setLoading(true);
+      setError(null);
+      
       try {
+        console.log("Fetching orders...");
+        
         // Fetch orders
         const { data: ordersData, error: ordersError } = await supabase
           .from("orders")
-          .select(`
-            *,
-            auth_users:user_id (email)
-          `)
+          .select("*")
           .order("created_at", { ascending: false });
 
         if (ordersError) throw ordersError;
+        
+        console.log("Orders retrieved:", ordersData?.length || 0);
+        
+        if (!ordersData || ordersData.length === 0) {
+          setOrders([]);
+          setLoading(false);
+          return;
+        }
+
+        // Get user email addresses
+        const userEmails: Record<string, string> = {};
+        const userIds = [...new Set(ordersData.filter(o => o.user_id).map(o => o.user_id))];
+        
+        for (const userId of userIds) {
+          try {
+            // Try to get user from auth admin API
+            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+            
+            if (!userError && userData && userData.user) {
+              userEmails[userId] = userData.user.email || "Unknown";
+            } else {
+              userEmails[userId] = `User ${userId.substring(0, 8)}`;
+            }
+          } catch (error) {
+            console.error("Error fetching user email:", error);
+            userEmails[userId] = `User ${userId.substring(0, 8)}`;
+          }
+        }
+        
+        console.log("User emails retrieved");
 
         // Count items per order
-        const { data: orderCountsData, error: countsError } = await supabase
+        const { data: orderItemsData, error: itemsError } = await supabase
           .from("order_items")
-          .select("order_id, count")
-          .select("order_id, quantity")
-          .order("order_id");
+          .select("order_id, quantity");
 
-        if (countsError) throw countsError;
+        if (itemsError) throw itemsError;
         
         // Create a map of order_id -> item count
         const orderCounts = new Map<string, number>();
-        orderCountsData.forEach((item) => {
+        orderItemsData?.forEach((item) => {
           const currentCount = orderCounts.get(item.order_id) || 0;
           orderCounts.set(item.order_id, currentCount + item.quantity);
         });
+        
+        console.log("Order items counted");
 
         // Format orders with user email and item count
-        const formattedOrders: Order[] = ordersData.map((order: any) => ({
+        const formattedOrders: Order[] = ordersData.map((order) => ({
           ...order,
-          user_email: order.auth_users?.email || "Unknown",
+          user_email: order.user_id ? userEmails[order.user_id] : "Guest User",
           itemCount: orderCounts.get(order.id) || 0
         }));
+        
+        console.log("Orders formatted:", formattedOrders.length);
 
         setOrders(formattedOrders);
       } catch (error: any) {
         console.error("Error fetching orders:", error);
+        setError(error.message || "Failed to load orders");
         toast.error("Failed to load orders");
       } finally {
         setLoading(false);
@@ -99,7 +139,7 @@ const AdminOrders = () => {
     };
 
     fetchOrders();
-  }, []);
+  }, [user]);
 
   // Handle view order details
   const handleViewOrderDetails = async (orderId: string) => {
@@ -108,22 +148,52 @@ const AdminOrders = () => {
     setLoadingOrderDetails(true);
     
     try {
-      // Fetch order items with menu item details
-      const { data, error } = await supabase
+      console.log("Fetching order details for:", orderId);
+      
+      // Fetch order items
+      const { data: itemsData, error: itemsError } = await supabase
         .from("order_items")
-        .select(`
-          *,
-          menu_items:menu_item_id (name)
-        `)
+        .select("*")
         .eq("order_id", orderId);
 
-      if (error) throw error;
+      if (itemsError) throw itemsError;
       
-      // Format order items with menu item name
-      const formattedItems: OrderItem[] = data.map((item: any) => ({
+      if (!itemsData || itemsData.length === 0) {
+        setOrderItems([]);
+        setLoadingOrderDetails(false);
+        return;
+      }
+      
+      console.log("Order items retrieved:", itemsData.length);
+      
+      // Get menu item names
+      const menuItemIds = [...new Set(itemsData.filter(i => i.menu_item_id).map(i => i.menu_item_id))];
+      const menuItemNames: Record<string, string> = {};
+      
+      if (menuItemIds.length > 0) {
+        const { data: menuData, error: menuError } = await supabase
+          .from("menu_items")
+          .select("id, name")
+          .in("id", menuItemIds);
+        
+        if (!menuError && menuData) {
+          menuData.forEach(item => {
+            menuItemNames[item.id] = item.name;
+          });
+        }
+      }
+      
+      console.log("Menu item names retrieved");
+      
+      // Format order items with menu item names
+      const formattedItems: OrderItem[] = itemsData.map((item) => ({
         ...item,
-        menu_item_name: item.menu_items?.name || "Unknown Item"
+        menu_item_name: item.menu_item_id ? 
+          (menuItemNames[item.menu_item_id] || "Unknown Item") : 
+          "Custom Item"
       }));
+      
+      console.log("Order items formatted:", formattedItems.length);
       
       setOrderItems(formattedItems);
     } catch (error: any) {
@@ -213,6 +283,21 @@ const AdminOrders = () => {
         </div>
       </div>
 
+      {/* Error message if needed */}
+      {error && (
+        <div className="mb-6 p-4 border border-red-200 bg-red-50 rounded-md flex items-start gap-3 text-red-700">
+          <AlertCircle className="h-5 w-5 mt-0.5" />
+          <div>
+            <p className="font-medium">Error loading orders</p>
+            <p className="text-sm mt-1">{error}</p>
+            <p className="text-sm mt-2">
+              To fix this issue, make sure your Supabase admin settings are properly configured and you have
+              the correct permissions.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-center mb-6">
         <div className="relative w-full sm:w-80">
@@ -282,14 +367,25 @@ const AdminOrders = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
-                  Loading orders...
+                <TableCell colSpan={7} className="text-center py-8 h-[200px]">
+                  <div className="flex flex-col items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
+                    <span className="text-muted-foreground">Loading orders...</span>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : filteredOrders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
-                  No orders found.
+                <TableCell colSpan={7} className="text-center py-8 h-[200px]">
+                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                    <AlertCircle className="h-8 w-8 mb-2" />
+                    <p>No orders found</p>
+                    <p className="text-sm mt-1">
+                      {searchQuery || statusFilter ? 
+                        "Try changing your search filters" : 
+                        "There are no orders in the system yet"}
+                    </p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
@@ -348,7 +444,15 @@ const AdminOrders = () => {
           </DialogHeader>
           
           {loadingOrderDetails ? (
-            <div className="py-8 text-center">Loading order details...</div>
+            <div className="py-8 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-gray-400" />
+              <p className="text-muted-foreground">Loading order details...</p>
+            </div>
+          ) : orderItems.length === 0 ? (
+            <div className="py-8 text-center">
+              <AlertCircle className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-muted-foreground">No items found for this order</p>
+            </div>
           ) : (
             <>
               <div className="py-4">

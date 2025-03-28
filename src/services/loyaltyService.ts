@@ -16,9 +16,11 @@ export type LoyaltyTransaction = {
 // Loyalty Service APIs
 export const loyaltyService = {
   // Get the user's current loyalty points balance
-  async getPointsBalance(): Promise<number> {
+  async getPointsBalance(userId?: string): Promise<number> {
     try {
-      const { data, error } = await supabase.rpc('get_user_points_balance');
+      const { data, error } = await supabase.rpc('get_user_points_balance', {
+        user_uuid: userId || (await supabase.auth.getUser()).data.user?.id
+      });
       
       if (error) throw error;
       
@@ -49,10 +51,14 @@ export const loyaltyService = {
   // Redeem points for a reward
   async redeemPoints(pointsToRedeem: number, rewardDescription: string): Promise<number> {
     try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error("User not authenticated");
+      
       // Negative amount because points are being spent
       const { data, error } = await supabase.rpc(
         'add_loyalty_points',
         {
+          user_uuid: user.id,
           points_to_add: -pointsToRedeem,
           transaction_type: 'redemption',
           description: rewardDescription
@@ -71,9 +77,13 @@ export const loyaltyService = {
   // Add points to a user's account
   async addPoints(points: number, type: string, description?: string, orderId?: string): Promise<number> {
     try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error("User not authenticated");
+      
       const { data, error } = await supabase.rpc(
         'add_loyalty_points',
         {
+          user_uuid: user.id,
           points_to_add: points,
           transaction_type: type,
           description: description || null,
@@ -93,9 +103,13 @@ export const loyaltyService = {
   // Check if the user has a pending spin from an order
   async checkPendingSpin(): Promise<boolean> {
     try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return false;
+      
       const { data, error } = await supabase
         .from('orders')
         .select('id')
+        .eq('user_id', user.id)
         .eq('pending_spin', true)
         .limit(1);
       
@@ -126,12 +140,16 @@ export const loyaltyService = {
   // Check if the user has already spun the wheel today
   async hasSpunToday(): Promise<boolean> {
     try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return false;
+      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
       const { data, error } = await supabase
         .from('loyalty_transactions')
         .select('created_at')
+        .eq('user_id', user.id)
         .eq('transaction_type', 'wheel_spin')
         .gte('created_at', today.toISOString())
         .limit(1);
@@ -148,16 +166,26 @@ export const loyaltyService = {
   // Calculate a spin reward on the server side with weighted probabilities
   async calculateSpinReward(): Promise<number> {
     try {
-      const { data, error } = await supabase.rpc('calculate_spin_reward');
+      // Use the function to get a reward value
+      const { data, error } = await supabase.functions.invoke('get-spin-reward');
       
       if (error) throw error;
       
-      // Ensure we only return a number
-      return typeof data === 'number' ? data : 0;
+      // Return the calculated reward points
+      return data?.points || 0;
     } catch (error) {
       console.error("Error calculating spin reward:", error);
       // Default to "Try Again" (0 points) in case of error
       return 0;
     }
+  },
+  
+  // Add points from a spin
+  async addPointsFromWheel(points: number): Promise<number> {
+    return this.addPoints(
+      points, 
+      'wheel_spin', 
+      points > 0 ? `Won ${points} points from Spin the Wheel` : 'Spin the Wheel - Try Again'
+    );
   }
 };

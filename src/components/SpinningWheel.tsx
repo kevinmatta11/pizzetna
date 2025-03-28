@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -23,13 +22,15 @@ const getSegmentIndexByValue = (value: number): number => {
 };
 
 interface SpinningWheelProps {
-  onComplete?: () => void;
+  onComplete?: (points: number) => void;
   hasSpinAvailable?: boolean;
+  orderId?: string | null;
 }
 
 export const SpinningWheel: React.FC<SpinningWheelProps> = ({ 
   onComplete,
-  hasSpinAvailable = false
+  hasSpinAvailable = false,
+  orderId = null 
 }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
@@ -66,7 +67,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
 
     try {
       // Call backend to calculate the reward
-      const points = await loyaltyService.getSpinReward();
+      const points = await loyaltyService.calculateSpinReward();
       
       // Find segment index based on the reward points
       const selectedSegmentIndex = getSegmentIndexByValue(points);
@@ -93,12 +94,14 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
         }
 
         try {
-          // Mark spin as used in database
-          await loyaltyService.markSpinAsUsed();
+          // Mark spin as used in database if orderId provided
+          if (orderId) {
+            await loyaltyService.markSpinUsed(orderId);
+          }
           
           // Add points if won
           if (points > 0) {
-            await loyaltyService.addPointsFromSpin(points);
+            await loyaltyService.addPointsFromWheel(points);
           } else {
             toast.info("Better luck next time!");
           }
@@ -108,7 +111,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
         }
 
         // Call onComplete callback
-        if (onComplete) onComplete();
+        if (onComplete) onComplete(points);
         
         setIsSpinning(false);
       }, 5000);

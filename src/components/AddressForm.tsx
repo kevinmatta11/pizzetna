@@ -1,13 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
+import { Button } from './ui/button';
 import {
   Form,
   FormControl,
@@ -16,9 +15,28 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+} from './ui/form';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Checkbox } from './ui/checkbox';
 
+// Define form validation schema
+const addressSchema = z.object({
+  full_name: z.string().min(2, { message: 'Full name is required' }),
+  address_line1: z.string().min(2, { message: 'Address is required' }),
+  address_line2: z.string().optional(),
+  city: z.string().min(2, { message: 'City is required' }),
+  state: z.string().min(2, { message: 'State is required' }),
+  postal_code: z.string().min(2, { message: 'Postal code is required' }),
+  country: z.string().min(2, { message: 'Country is required' }).default('United States'),
+  phone: z.string().optional(),
+  is_default: z.boolean().default(false),
+});
+
+// Type for form values
+type AddressFormValues = z.infer<typeof addressSchema>;
+
+// Type for address
 type Address = {
   id: string;
   full_name: string;
@@ -30,35 +48,22 @@ type Address = {
   country: string;
   phone: string | null;
   is_default: boolean;
+  user_id: string;
 };
 
 interface AddressFormProps {
-  address: Address | null;
+  address?: Address | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-const formSchema = z.object({
-  full_name: z.string().min(1, { message: 'Full name is required' }),
-  address_line1: z.string().min(1, { message: 'Address line 1 is required' }),
-  address_line2: z.string().nullable(),
-  city: z.string().min(1, { message: 'City is required' }),
-  state: z.string().min(1, { message: 'State is required' }),
-  postal_code: z.string().min(1, { message: 'Postal code is required' }),
-  country: z.string().min(1, { message: 'Country is required' }),
-  phone: z.string().nullable(),
-  is_default: z.boolean().default(false),
-});
-
-const AddressForm: React.FC<AddressFormProps> = ({ 
-  address, 
-  onSuccess, 
-  onCancel 
-}) => {
+const AddressForm: React.FC<AddressFormProps> = ({ address, onSuccess, onCancel }) => {
   const { user } = useAuth();
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Set up form with default values
+  const form = useForm<AddressFormValues>({
+    resolver: zodResolver(addressSchema),
     defaultValues: {
       full_name: address?.full_name || '',
       address_line1: address?.address_line1 || '',
@@ -72,19 +77,29 @@ const AddressForm: React.FC<AddressFormProps> = ({
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: AddressFormValues) => {
     if (!user) {
-      toast.error('You must be logged in to save addresses');
+      toast.error('You must be logged in to save an address');
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
-      if (address) {
+      if (address?.id) {
         // Update existing address
         const { error } = await supabase
           .from('user_addresses')
           .update({
-            ...values,
+            full_name: values.full_name,
+            address_line1: values.address_line1,
+            address_line2: values.address_line2 || null,
+            city: values.city,
+            state: values.state,
+            postal_code: values.postal_code,
+            country: values.country,
+            phone: values.phone || null,
+            is_default: values.is_default,
             updated_at: new Date().toISOString(),
           })
           .eq('id', address.id);
@@ -93,21 +108,29 @@ const AddressForm: React.FC<AddressFormProps> = ({
         toast.success('Address updated successfully');
       } else {
         // Create new address
-        const { error } = await supabase
-          .from('user_addresses')
-          .insert({
-            ...values,
-            user_id: user.id,
-          });
+        const { error } = await supabase.from('user_addresses').insert({
+          user_id: user.id,
+          full_name: values.full_name,
+          address_line1: values.address_line1,
+          address_line2: values.address_line2 || null,
+          city: values.city,
+          state: values.state,
+          postal_code: values.postal_code,
+          country: values.country,
+          phone: values.phone || null,
+          is_default: values.is_default,
+        });
 
         if (error) throw error;
-        toast.success('Address added successfully');
+        toast.success('Address saved successfully');
       }
-      
+
       onSuccess();
     } catch (error) {
       console.error('Error saving address:', error);
       toast.error('Failed to save address');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -149,7 +172,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
             <FormItem>
               <FormLabel>Address Line 2 (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="Apt 4B" {...field} value={field.value || ''} />
+                <Input placeholder="Apt 4B" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -223,7 +246,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
             <FormItem>
               <FormLabel>Phone (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="(555) 123-4567" {...field} value={field.value || ''} />
+                <Input placeholder="(123) 456-7890" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -234,7 +257,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
           control={form.control}
           name="is_default"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+            <FormItem className="flex items-start space-x-3 space-y-0 rounded-md border p-4">
               <FormControl>
                 <Checkbox
                   checked={field.value}
@@ -244,19 +267,27 @@ const AddressForm: React.FC<AddressFormProps> = ({
               <div className="space-y-1 leading-none">
                 <FormLabel>Set as default address</FormLabel>
                 <FormDescription>
-                  This address will be used as your default for deliveries
+                  This address will be used as the default for deliveries.
                 </FormDescription>
               </div>
             </FormItem>
           )}
         />
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" type="button" onClick={onCancel}>
+        <div className="flex justify-end space-x-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+          >
             Cancel
           </Button>
-          <Button className="bg-brunch-500 hover:bg-brunch-600" type="submit">
-            {address ? 'Update Address' : 'Add Address'}
+          <Button 
+            type="submit"
+            className="bg-brunch-500 hover:bg-brunch-600 text-white"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Saving...' : address?.id ? 'Update Address' : 'Save Address'}
           </Button>
         </div>
       </form>

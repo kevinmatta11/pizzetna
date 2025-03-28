@@ -16,3 +16,6 @@ api_url = "http://localhost:54321"
 
 [functions.get-spin-reward]
 verify_jwt = true
+
+[functions.admin-get-users]
+verify_jwt = true

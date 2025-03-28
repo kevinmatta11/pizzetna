@@ -23,10 +23,11 @@ type UserWithLoyalty = {
   created_at: string;
   last_sign_in_at: string | null;
   points_balance: number;
+  profile?: any;
 };
 
 const AdminUsers = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [users, setUsers] = useState<UserWithLoyalty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,78 +48,36 @@ const AdminUsers = () => {
       try {
         console.log("Starting to fetch users...");
         
-        // Get all users from auth.users table via RPC function
-        const { data: authData, error: authError } = await supabase
-          .from('profiles')
-          .select('id, created_at');
-          
-        if (authError) throw authError;
+        if (!session?.access_token) {
+          throw new Error("No access token available");
+        }
         
-        console.log("Retrieved profiles:", authData);
+        // Call our edge function to get users data
+        const response = await fetch(`${supabase.supabaseUrl}/functions/v1/admin-get-users`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         
-        if (!authData || authData.length === 0) {
-          console.log("No users found in profiles");
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Failed to fetch users: ${errorData.error || response.statusText}`);
+        }
+        
+        const { users: userData } = await response.json();
+        
+        console.log("Retrieved user data:", userData);
+        
+        if (!userData || userData.length === 0) {
+          console.log("No users found");
           setUsers([]);
           setLoading(false);
           return;
         }
         
-        // Get the user email addresses
-        const userEmails: Record<string, any> = {};
-        for (const profile of authData) {
-          // Try to get user email from auth
-          try {
-            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(profile.id);
-            
-            if (!userError && userData && userData.user) {
-              userEmails[profile.id] = {
-                email: userData.user.email || "Unknown",
-                last_sign_in_at: userData.user.last_sign_in_at
-              };
-            } else {
-              userEmails[profile.id] = { email: "Unknown", last_sign_in_at: null };
-            }
-          } catch (error) {
-            console.error("Error fetching user email:", error);
-            userEmails[profile.id] = { email: "Unknown", last_sign_in_at: null };
-          }
-        }
-        
-        console.log("Retrieved user emails");
-        
-        // Fetch loyalty points for each user
-        const userPoints: Record<string, number> = {};
-        
-        for (const profile of authData) {
-          try {
-            const { data: pointsData, error: pointsError } = await supabase.rpc(
-              'get_user_points_balance',
-              { user_uuid: profile.id }
-            );
-            
-            if (pointsError) throw pointsError;
-            
-            userPoints[profile.id] = pointsData || 0;
-          } catch (error) {
-            console.error("Error fetching points for user:", profile.id, error);
-            userPoints[profile.id] = 0;
-          }
-        }
-        
-        console.log("Retrieved user points");
-        
-        // Combine user data with loyalty points
-        const usersWithData: UserWithLoyalty[] = authData.map(profile => ({
-          id: profile.id,
-          email: userEmails[profile.id]?.email || "Unknown Email",
-          created_at: profile.created_at,
-          last_sign_in_at: userEmails[profile.id]?.last_sign_in_at || null,
-          points_balance: userPoints[profile.id] || 0
-        }));
-        
-        console.log("Combined user data:", usersWithData);
-        
-        setUsers(usersWithData);
+        setUsers(userData);
       } catch (error: any) {
         console.error("Error fetching users:", error);
         setError(error.message || "Failed to load users");
@@ -131,7 +90,7 @@ const AdminUsers = () => {
     if (user) {
       fetchUsers();
     }
-  }, [user]);
+  }, [user, session]);
 
   // Handle adjusting user points
   const handleAdjustPoints = async () => {

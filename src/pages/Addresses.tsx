@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 
 type Address = {
   id: string;
+  user_id: string;  // Added the missing user_id property
   full_name: string;
   address_line1: string;
   address_line2: string | null;

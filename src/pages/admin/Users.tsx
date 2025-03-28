@@ -52,10 +52,10 @@ const AdminUsers = () => {
           throw new Error("No access token available");
         }
         
-        // Verify the URL is correctly formed
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        // Get the Supabase URL from the client configuration
+        const supabaseUrl = supabase.supabaseUrl;
         if (!supabaseUrl) {
-          throw new Error("VITE_SUPABASE_URL is not defined");
+          throw new Error("Supabase URL is not defined");
         }
         
         console.log(`Calling edge function at: ${supabaseUrl}/functions/v1/admin-get-users`);

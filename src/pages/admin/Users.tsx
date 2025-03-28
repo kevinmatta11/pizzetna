@@ -53,7 +53,7 @@ const AdminUsers = () => {
         }
         
         // Call our edge function to get users data
-        const response = await fetch(`${supabase.supabaseUrl}/functions/v1/admin-get-users`, {
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-get-users`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,

@@ -91,6 +91,36 @@ export const loyaltyService = {
     }
   },
   
+  // Check if user has already spun today
+  async hasSpunToday(): Promise<boolean> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return false;
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { data, error } = await supabase
+        .from('loyalty_transactions')
+        .select('created_at')
+        .eq('user_id', user.user.id)
+        .eq('transaction_type', 'earned')
+        .ilike('description', 'Wheel spin reward%')
+        .gte('created_at', today.toISOString())
+        .limit(1);
+      
+      if (error) {
+        console.error("Error checking daily spin:", error);
+        throw error;
+      }
+      
+      return data && data.length > 0;
+    } catch (error) {
+      console.error("Error in hasSpunToday:", error);
+      return false;
+    }
+  },
+  
   // Mark spin as used
   async markSpinAsUsed(): Promise<void> {
     try {
@@ -122,6 +152,36 @@ export const loyaltyService = {
       }
     } catch (error) {
       console.error("Error in markSpinAsUsed:", error);
+    }
+  },
+  
+  // Calculate spin reward on the server side
+  async getSpinReward(): Promise<number> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("User not authenticated");
+      
+      // Check if user has a pending spin
+      const hasPendingSpin = await this.checkPendingSpin();
+      if (!hasPendingSpin) {
+        throw new Error("No pending spin available");
+      }
+      
+      // Check if user has already spun today
+      const hasSpunToday = await this.hasSpunToday();
+      if (hasSpunToday) {
+        throw new Error("You've already used your spin today");
+      }
+      
+      // Call the Supabase RPC function to calculate the reward
+      const { data, error } = await supabase.rpc('calculate_spin_reward');
+      
+      if (error) throw error;
+      
+      return data || 0;
+    } catch (error) {
+      console.error("Error getting spin reward:", error);
+      throw error;
     }
   },
   

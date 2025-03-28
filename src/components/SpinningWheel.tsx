@@ -2,67 +2,62 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { loyaltyService } from '@/services/loyaltyService';
 import { Trophy, Gift, Coins, RotateCw } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
-// Define the wheel segments with their values, display text, colors, and probabilities
+// Define the wheel segments with their values, display text, colors, and icons
 const segments = [
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.4, icon: '🎲' },
-  { text: '50 Points', value: 50, color: '#FFE7AD', probability: 0.1, icon: '🌟' },
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.4, icon: '🎲' },
-  { text: '100 Points', value: 100, color: '#FFDDA1', probability: 0.08, icon: '✨' },
-  { text: '300 Points', value: 300, color: '#FFC285', probability: 0.02, icon: '🎁' },
+  { text: 'Try Again', value: 0, color: '#F1F1F1', icon: '🎲' },
+  { text: '50 Points', value: 50, color: '#FFE7AD', icon: '🌟' },
+  { text: 'Try Again', value: 0, color: '#F1F1F1', icon: '🎲' },
+  { text: '100 Points', value: 100, color: '#FFDDA1', icon: '✨' },
+  { text: '300 Points', value: 300, color: '#FFC285', icon: '🎁' },
 ];
 
-// Function to select a random segment based on weighted probabilities
-const getWeightedRandomSegment = () => {
-  const weights = segments.map(segment => segment.probability);
-  const totalWeight = weights.reduce((a, b) => a + b, 0);
-  let random = Math.random() * totalWeight;
-  
-  for (let i = 0; i < segments.length; i++) {
-    if (random < weights[i]) {
-      return i;
-    }
-    random -= weights[i];
-  }
-  return 0; // Fallback
+// Function to get the index based on point value
+const getSegmentIndexByValue = (value: number): number => {
+  const index = segments.findIndex(segment => segment.value === value);
+  return index >= 0 ? index : 0; // Default to first segment if not found
 };
 
 interface SpinningWheelProps {
-  onComplete?: (points: number) => void;
+  onComplete?: () => void;
   hasSpinAvailable?: boolean;
 }
 
 export const SpinningWheel: React.FC<SpinningWheelProps> = ({ 
   onComplete,
-  hasSpinAvailable = true
+  hasSpinAvailable = false
 }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<number | null>(null);
-  const [hasPendingSpin, setHasPendingSpin] = useState(false);
   const [winAnimation, setWinAnimation] = useState(false);
   const [winningSegmentIndex, setWinningSegmentIndex] = useState<number | null>(null);
   const wheelRef = useRef<HTMLDivElement>(null);
+  const confettiRef = useRef<HTMLDivElement>(null);
   
-  useEffect(() => {
-    const checkPendingSpin = async () => {
-      try {
-        const hasSpin = await loyaltyService.checkPendingSpin();
-        setHasPendingSpin(hasSpin);
-      } catch (error) {
-        console.error("Error checking for pending spin:", error);
-        setHasPendingSpin(false);
-      }
-    };
+  const triggerConfetti = () => {
+    if (!confettiRef.current) return;
     
-    checkPendingSpin();
-  }, []);
+    const rect = confettiRef.current.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { 
+        x: x / window.innerWidth, 
+        y: y / window.innerHeight 
+      }
+    });
+  };
 
   const spinWheel = async () => {
-    if (isSpinning || !hasPendingSpin) return;
+    if (isSpinning || !hasSpinAvailable) return;
 
     setIsSpinning(true);
     setResult(null);
@@ -70,50 +65,67 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
     setWinningSegmentIndex(null);
 
     try {
-      const selectedSegmentIndex = getWeightedRandomSegment();
+      // Call backend to calculate the reward
+      const points = await loyaltyService.getSpinReward();
+      
+      // Find segment index based on the reward points
+      const selectedSegmentIndex = getSegmentIndexByValue(points);
       setWinningSegmentIndex(selectedSegmentIndex);
       
+      // Calculate rotation angle to land on this segment
       const segmentAngle = 360 / segments.length;
-      const targetRotation = 1800 + (selectedSegmentIndex * segmentAngle) + (0.5 * segmentAngle);
-      const randomOffset = Math.random() * (segmentAngle * 0.7);
-      const finalRotation = rotation + targetRotation + randomOffset;
+      const targetRotation = 1800 + (selectedSegmentIndex * segmentAngle);
+      const finalRotation = rotation + targetRotation + (segmentAngle / 2);
 
       setRotation(finalRotation);
 
+      // Wait for animation to finish before showing result
       setTimeout(async () => {
-        const points = segments[selectedSegmentIndex].value;
         setResult(points);
         
+        // Show win animation for non-zero points
         if (points > 0) {
           setWinAnimation(true);
+          // Add a small delay before triggering confetti
+          setTimeout(() => {
+            triggerConfetti();
+          }, 300);
         }
 
         try {
+          // Mark spin as used in database
           await loyaltyService.markSpinAsUsed();
-          setHasPendingSpin(false);
-
+          
+          // Add points if won
           if (points > 0) {
             await loyaltyService.addPointsFromSpin(points);
           } else {
-            toast.info("Try again next time!");
+            toast.info("Better luck next time!");
           }
         } catch (error) {
-          console.error("Error adding points:", error);
-          toast.error("Failed to update points. Please try again.");
+          console.error("Error processing spin result:", error);
+          toast.error("Failed to process spin result. Please try again.");
         }
 
-        if (onComplete) onComplete(points);
+        // Call onComplete callback
+        if (onComplete) onComplete();
+        
         setIsSpinning(false);
       }, 5000);
     } catch (error) {
       console.error("Error in spinWheel:", error);
       setIsSpinning(false);
-      toast.error("Something went wrong with the spin. Please try again.");
+      
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Something went wrong with the spin. Please try again.");
+      }
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center gap-6 py-6 relative">
+    <div ref={confettiRef} className="flex flex-col items-center justify-center gap-6 py-6 relative">
       <div className="text-center mb-2 text-brunch-600">
         <p className="font-medium">Spin the wheel to win loyalty points!</p>
       </div>
@@ -203,7 +215,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
 
       <Button
         onClick={spinWheel}
-        disabled={isSpinning || !hasPendingSpin}
+        disabled={isSpinning || !hasSpinAvailable}
         className={`${isSpinning ? 'bg-brunch-400' : 'bg-brunch-500 hover:bg-brunch-600'} text-white font-bold px-8 py-6 rounded-full shadow-md transition-all duration-300 relative overflow-hidden flex items-center gap-2`}
       >
         {isSpinning ? (
@@ -211,7 +223,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
             <RotateCw className="h-5 w-5 animate-spin" />
             Spinning...
           </>
-        ) : hasPendingSpin ? (
+        ) : hasSpinAvailable ? (
           <>
             <Gift className="h-5 w-5" />
             Spin the Wheel
@@ -224,39 +236,42 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
         )}
       </Button>
 
-      {result !== null && winningSegmentIndex !== null && (
-        <motion.div 
-          className="mt-4 text-center p-4 rounded-lg bg-white shadow-md border border-brunch-100"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {result > 0 ? (
-            <div className="flex flex-col items-center">
-              <motion.div
-                animate={winAnimation ? { scale: [1, 1.2, 1] } : {}}
-                transition={{ duration: 0.5, repeat: 2 }}
-              >
-                <Trophy className="h-8 w-8 text-yellow-500 mb-2" />
-              </motion.div>
-              <h3 className="text-xl font-bold text-brunch-700">
-                Congratulations!
-              </h3>
-              <p className="text-brunch-600">
-                You won <span className="font-bold text-brunch-700">{result} points</span>!
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center">
-              <div className="mb-2 text-2xl">🎲</div>
-              <h3 className="text-xl font-bold text-brunch-700">
-                Better luck next time!
-              </h3>
-              <p className="text-brunch-500">Try again after your next order.</p>
-            </div>
-          )}
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {result !== null && winningSegmentIndex !== null && (
+          <motion.div 
+            className="mt-4 text-center p-4 rounded-lg bg-white shadow-md border border-brunch-100"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.5 }}
+          >
+            {result > 0 ? (
+              <div className="flex flex-col items-center">
+                <motion.div
+                  animate={winAnimation ? { scale: [1, 1.2, 1] } : {}}
+                  transition={{ duration: 0.5, repeat: 2 }}
+                >
+                  <Trophy className="h-8 w-8 text-yellow-500 mb-2" />
+                </motion.div>
+                <h3 className="text-xl font-bold text-brunch-700">
+                  Congratulations!
+                </h3>
+                <p className="text-brunch-600">
+                  You won <span className="font-bold text-brunch-700">{result} points</span>!
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <div className="mb-2 text-2xl">🎲</div>
+                <h3 className="text-xl font-bold text-brunch-700">
+                  Better luck next time!
+                </h3>
+                <p className="text-brunch-500">Try again after your next order.</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

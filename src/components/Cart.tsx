@@ -74,7 +74,6 @@ export const Cart = () => {
   };
 
   const handleLoginRedirect = () => {
-    // Store order ID in localStorage before redirecting
     if (orderId) {
       localStorage.setItem('pendingOrderId', orderId.toString());
     }
@@ -87,8 +86,7 @@ export const Cart = () => {
     setSpinDialogOpen(false);
     setOpen(false);
     clearCart();
-    // Navigate to the loyalty page with a query parameter indicating we want to auto-spin
-    navigate('/loyalty?spin=true');
+    navigate('/spin');
   };
 
   const handlePaymentSuccess = async () => {
@@ -96,7 +94,6 @@ export const Cart = () => {
       setIsProcessing(true);
       const finalAmount = Math.max(0, totalPrice + 3.99 - discountAmount);
       
-      // Format the cart items for the edge function
       const orderItems = items.map(item => ({
         menuItemId: item.id,
         price: item.price,
@@ -105,7 +102,6 @@ export const Cart = () => {
       
       console.log("Submitting order with items:", orderItems);
       
-      // Call the edge function to create the order
       const { data, error } = await supabase.functions.invoke('create-order', {
         body: {
           userId: user?.id || null,
@@ -128,12 +124,10 @@ export const Cart = () => {
       
       toast.success("Your order has been placed successfully!");
       
-      // Only show spin dialog for authenticated users
       if (user) {
         setCheckoutStep('confirmation');
         setSpinDialogOpen(true);
       } else {
-        // For anonymous users, ask if they want to log in for rewards
         setCheckoutStep('confirmation');
         setLoginDialogOpen(true);
       }
@@ -541,10 +535,8 @@ export const Cart = () => {
         </Drawer>
       )}
       
-      {/* Login dialog that appears after checkout for non-authenticated users */}
       <LoginPrompt />
       
-      {/* Spin wheel dialog for authenticated users */}
       <SpinPrompt />
     </>
   );

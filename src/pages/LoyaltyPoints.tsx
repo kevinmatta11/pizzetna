@@ -2,9 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { loyaltyService, LoyaltyTransaction } from '@/services/loyaltyService';
-import { SpinningWheel } from '@/components/SpinningWheel';
 import { LoyaltyTransactionHistory } from '@/components/LoyaltyTransactionHistory';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -12,9 +11,9 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Coins, Gift, History, Trophy, InfoIcon } from 'lucide-react';
+import { Coins, History, Trophy, InfoIcon } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -23,21 +22,8 @@ const LoyaltyPoints = () => {
   const [pointsBalance, setPointsBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<LoyaltyTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasSpinAvailable, setHasSpinAvailable] = useState(false);
+  const [hasPendingSpin, setHasPendingSpin] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState<string>("wheel");
-  
-  // Check if we should auto-focus on the wheel tab from URL params
-  const searchParams = new URLSearchParams(location.search);
-  const shouldAutoSpin = searchParams.get('spin') === 'true';
-  
-  useEffect(() => {
-    // If we should auto-spin, make sure the wheel tab is active
-    if (shouldAutoSpin) {
-      setActiveTab("wheel");
-    }
-  }, [shouldAutoSpin]);
   
   useEffect(() => {
     // If not authenticated, redirect to login
@@ -57,7 +43,7 @@ const LoyaltyPoints = () => {
       
       setPointsBalance(balance);
       setTransactions(history);
-      setHasSpinAvailable(spinAvailable);
+      setHasPendingSpin(spinAvailable);
     } catch (error) {
       console.error("Error loading loyalty data:", error);
     } finally {
@@ -71,9 +57,8 @@ const LoyaltyPoints = () => {
     }
   }, [user]);
   
-  const handleSpinComplete = (points: number) => {
-    // Refresh data after spin
-    loadData();
+  const handleSpinClick = () => {
+    navigate('/spin');
   };
   
   if (authLoading) {
@@ -124,23 +109,39 @@ const LoyaltyPoints = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Gift className="h-5 w-5 mr-2 text-brunch-500" />
+                  <Trophy className="h-5 w-5 mr-2 text-brunch-500" />
                   Spin to Win
                 </CardTitle>
                 <CardDescription>
                   Spin the wheel after placing an order to win points
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex justify-center">
-                {hasSpinAvailable ? (
-                  <p className="text-sm text-green-600 font-medium flex items-center">
-                    <InfoIcon className="h-4 w-4 mr-1" />
-                    You have a spin available!
-                  </p>
+              <CardContent>
+                {hasPendingSpin ? (
+                  <div className="flex flex-col items-center">
+                    <p className="text-sm text-green-600 font-medium flex items-center mb-4">
+                      <InfoIcon className="h-4 w-4 mr-1" />
+                      You have a spin available!
+                    </p>
+                    <Button 
+                      onClick={handleSpinClick}
+                      className="bg-brunch-500 hover:bg-brunch-600"
+                    >
+                      Go to Spin Wheel
+                    </Button>
+                  </div>
                 ) : (
-                  <p className="text-sm text-brunch-500">
-                    Place an order to earn a spin!
-                  </p>
+                  <div className="flex flex-col items-center">
+                    <p className="text-sm text-brunch-500 mb-4">
+                      Place an order to earn a spin!
+                    </p>
+                    <Button 
+                      variant="outline"
+                      onClick={() => navigate('/menu')}
+                    >
+                      View Menu
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -154,52 +155,23 @@ const LoyaltyPoints = () => {
             </AlertDescription>
           </Alert>
           
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="wheel" className="flex items-center">
-                <Gift className="h-4 w-4 mr-2" />
-                Spin the Wheel
-              </TabsTrigger>
-              <TabsTrigger value="history" className="flex items-center">
-                <History className="h-4 w-4 mr-2" />
-                Transaction History
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="wheel" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Try Your Luck!</CardTitle>
-                  <CardDescription>
-                    Spin the wheel to win up to 300 loyalty points
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex justify-center">
-                  <SpinningWheel 
-                    onComplete={handleSpinComplete} 
-                    hasSpinAvailable={hasSpinAvailable}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="history" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Points History</CardTitle>
-                  <CardDescription>
-                    View your loyalty points earned and redeemed
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <LoyaltyTransactionHistory 
-                    transactions={transactions}
-                    isLoading={isLoading}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <History className="h-5 w-5 mr-2" />
+                Points History
+              </CardTitle>
+              <CardDescription>
+                View your loyalty points earned and redeemed
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LoyaltyTransactionHistory 
+                transactions={transactions}
+                isLoading={isLoading}
+              />
+            </CardContent>
+          </Card>
         </div>
       </main>
       

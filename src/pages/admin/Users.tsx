@@ -52,8 +52,8 @@ const AdminUsers = () => {
           throw new Error("No access token available");
         }
         
-        // Get the Supabase URL from the client configuration
-        const supabaseUrl = supabase.supabaseUrl;
+        // Get the Supabase URL from the environment
+        const supabaseUrl = SUPABASE_URL;
         if (!supabaseUrl) {
           throw new Error("Supabase URL is not defined");
         }
@@ -73,10 +73,16 @@ const AdminUsers = () => {
         if (!response.ok) {
           // Try to parse error JSON if possible
           let errorMessage = `HTTP error! status: ${response.status}`;
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-          } catch (e) {
+          const contentType = response.headers.get('content-type');
+          
+          if (contentType && contentType.includes('application/json')) {
+            try {
+              const errorData = await response.json();
+              errorMessage = errorData.error || errorMessage;
+            } catch (e) {
+              console.error("Error parsing JSON response:", e);
+            }
+          } else {
             // If we can't parse JSON, use text content as fallback
             const textContent = await response.text();
             console.error("Non-JSON response:", textContent.substring(0, 200) + "...");

@@ -1,184 +1,107 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { corsHeaders } from '../_shared/cors.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
-// CORS headers for browser access
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+console.log('SUPABASE_URL length:', SUPABASE_URL?.length || 0);
+console.log('SUPABASE_SERVICE_ROLE_KEY length:', SUPABASE_SERVICE_ROLE_KEY?.length || 0);
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: corsHeaders,
+    });
   }
-
+  
   try {
-    console.log("Edge function invoked: admin-get-users");
+    console.log('Edge function invoked: admin-get-users');
     
-    // Create a Supabase client with the service role key
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing environment variables:", {
-        hasUrl: Boolean(supabaseUrl),
-        hasKey: Boolean(supabaseServiceKey)
-      });
-      
-      throw new Error("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set");
+    // Initialize Supabase client with admin privileges
+    console.log('Initializing Supabase admin client');
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
     }
-
-    console.log("Initializing Supabase admin client");
     
-    // Initialize the Supabase client with the service role key
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
     
-    // Get the user's JWT from the request
-    const authHeader = req.headers.get("Authorization");
+    // Verify the requesting user is authenticated and has admin privileges
+    console.log('Verifying user token');
+    const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error("No authorization header provided");
-      return new Response(
-        JSON.stringify({ error: "No authorization header" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      throw new Error('Authorization header is required');
     }
-
-    // Verify that the user is an admin
-    const token = authHeader.replace("Bearer ", "");
-    console.log("Verifying user token");
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    // Extract token from header
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
     if (userError || !user) {
-      console.error("Invalid token or user not found:", userError);
-      return new Response(
-        JSON.stringify({ error: "Invalid token", details: userError }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+      throw new Error(`Invalid token or user not found: ${userError}`);
+    }
+    
+    // Check if user is admin
+    console.log('Checking if user is admin');
+    const { data: isAdmin, error: adminCheckError } = await supabaseAdmin.rpc('is_admin', { user_id: user.id });
+    
+    if (adminCheckError || !isAdmin) {
+      throw new Error('User is not an admin');
+    }
+    
+    // Fetch all users
+    console.log('Fetching users data');
+    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (listUsersError) {
+      throw new Error(`Failed to list users: ${listUsersError.message}`);
+    }
+    
+    // Get loyalty points for each user
+    console.log('Getting loyalty points for each user');
+    const usersWithLoyalty = await Promise.all(users.map(async (user) => {
+      const { data: pointsBalance, error: pointsError } = await supabaseAdmin.rpc(
+        'get_user_points_balance',
+        { user_uuid: user.id }
       );
-    }
-
-    console.log("Checking admin status for user:", user.id);
-    
-    // Check if user is an admin
-    const { data: isAdmin, error: isAdminError } = await supabase.rpc(
-      "is_admin",
-      { user_id: user.id }
-    );
-
-    if (isAdminError) {
-      console.error("Error checking admin status:", isAdminError);
-      return new Response(
-        JSON.stringify({ error: "Error checking admin status", details: isAdminError }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    if (!isAdmin) {
-      console.error("User is not an admin:", user.id);
-      return new Response(
-        JSON.stringify({ error: "Not authorized as admin" }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    console.log("Admin verification successful, fetching users");
-
-    // Get all users from auth.users (using service role)
-    const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
-    
-    if (authUsersError) {
-      console.error("Error fetching auth users:", authUsersError);
-      throw new Error(`Error fetching auth users: ${authUsersError.message}`);
-    }
-    
-    console.log(`Found ${authUsers.users.length} users, fetching profiles`);
-
-    // Get all user profiles
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("*");
-    
-    if (profilesError) {
-      console.error("Error fetching profiles:", profilesError);
-      throw new Error(`Error fetching profiles: ${profilesError.message}`);
-    }
-
-    console.log(`Found ${profiles.length} profiles, fetching points`);
-
-    // Get all user points
-    const pointsPromises = profiles.map(async (profile) => {
-      const { data: points, error: pointsError } = await supabase.rpc(
-        "get_user_points_balance",
-        { user_uuid: profile.id }
-      );
-      
-      if (pointsError) {
-        console.error(`Error fetching points for user ${profile.id}: ${pointsError.message}`);
-        return { id: profile.id, points: 0 };
-      }
-      
-      return { id: profile.id, points };
-    });
-    
-    const pointsResults = await Promise.all(pointsPromises);
-    const pointsMap = pointsResults.reduce((acc, { id, points }) => {
-      acc[id] = points;
-      return acc;
-    }, {});
-
-    console.log("Building combined user data");
-
-    // Create a map of profiles for faster lookup
-    const profilesMap = profiles.reduce((acc, profile) => {
-      acc[profile.id] = profile;
-      return acc;
-    }, {});
-
-    // Combine user data
-    const combinedUsers = authUsers.users.map((authUser) => {
-      const profile = profilesMap[authUser.id] || {};
       
       return {
-        id: authUser.id,
-        email: authUser.email || "Unknown",
-        created_at: authUser.created_at,
-        last_sign_in_at: authUser.last_sign_in_at,
-        points_balance: pointsMap[authUser.id] || 0,
-        profile: profile
+        ...user,
+        points_balance: pointsError ? 0 : pointsBalance
       };
-    });
-
-    console.log(`Returning data for ${combinedUsers.length} users`);
-
+    }));
+    
+    // Return the data with CORS headers
+    console.log(`Successfully fetched ${usersWithLoyalty.length} users`);
     return new Response(
-      JSON.stringify({ users: combinedUsers }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
+      JSON.stringify({ users: usersWithLoyalty }),
+      { 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders 
+        } 
       }
     );
   } catch (error) {
-    console.error("Error in admin-get-users function:", error);
+    console.error('Error:', error.message);
     
     return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+      JSON.stringify({ 
+        error: error.message || 'An error occurred while fetching users' 
+      }),
+      { 
+        status: 400, 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders 
+        } 
       }
     );
   }

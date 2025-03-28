@@ -23,6 +23,7 @@ const LoyaltyPoints = () => {
   const [pointsBalance, setPointsBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<LoyaltyTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasSpinAvailable, setHasSpinAvailable] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<string>("wheel");
@@ -48,13 +49,15 @@ const LoyaltyPoints = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [balance, history] = await Promise.all([
+      const [balance, history, spinAvailable] = await Promise.all([
         loyaltyService.getPointsBalance(),
-        loyaltyService.getTransactionHistory()
+        loyaltyService.getTransactionHistory(),
+        loyaltyService.checkPendingSpin()
       ]);
       
       setPointsBalance(balance);
       setTransactions(history);
+      setHasSpinAvailable(spinAvailable);
     } catch (error) {
       console.error("Error loading loyalty data:", error);
     } finally {
@@ -72,10 +75,6 @@ const LoyaltyPoints = () => {
     // Refresh data after spin
     loadData();
   };
-  
-  // Check if the user has a pending spin (from recent order)
-  // For this implementation, we'll use the URL parameter to determine if they should spin
-  const hasSpinAvailable = true;
   
   if (authLoading) {
     return (

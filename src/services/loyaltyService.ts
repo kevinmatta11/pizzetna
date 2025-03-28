@@ -40,9 +40,13 @@ export const loyaltyService = {
   // Get transaction history
   async getTransactionHistory(): Promise<LoyaltyTransaction[]> {
     try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return [];
+      
       const { data, error } = await supabase
         .from('loyalty_transactions')
         .select('*')
+        .eq('user_id', user.user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -57,7 +61,7 @@ export const loyaltyService = {
       }));
     } catch (error) {
       console.error("Error in getTransactionHistory:", error);
-      throw error;
+      return [];
     }
   },
   

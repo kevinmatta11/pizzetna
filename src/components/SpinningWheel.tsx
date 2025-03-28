@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -5,19 +6,16 @@ import { motion } from 'framer-motion';
 import { loyaltyService } from '@/services/loyaltyService';
 import { Trophy, Gift, Coins, RotateCw } from 'lucide-react';
 
+// Define the wheel segments with their values, display text, colors, and probabilities
 const segments = [
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: '🎲' },
-  { text: '50 Points', value: 50, color: '#FFE7AD', probability: 0.2, icon: '🌟' },
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: '🎲' },
-  { text: '100 Points', value: 100, color: '#FFDDA1', probability: 0.2, icon: '✨' },
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: '🎲' },
-  { text: '300 Points', value: 300, color: '#FFC285', probability: 0.1, icon: '🎁' },
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: '🎲' },
-  { text: '50 Points', value: 50, color: '#FFE7AD', probability: 0.2, icon: '🌟' },
-  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.5, icon: '🎲' },
-  { text: '100 Points', value: 100, color: '#FFDDA1', probability: 0.2, icon: '✨' },
+  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.4, icon: '🎲' },
+  { text: '50 Points', value: 50, color: '#FFE7AD', probability: 0.1, icon: '🌟' },
+  { text: 'Try Again', value: 0, color: '#F1F1F1', probability: 0.4, icon: '🎲' },
+  { text: '100 Points', value: 100, color: '#FFDDA1', probability: 0.08, icon: '✨' },
+  { text: '300 Points', value: 300, color: '#FFC285', probability: 0.02, icon: '🎁' },
 ];
 
+// Function to select a random segment based on weighted probabilities
 const getWeightedRandomSegment = () => {
   const weights = segments.map(segment => segment.probability);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
@@ -44,7 +42,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<number | null>(null);
-  const [hasPendingSpin, setHasPendingSpin] = useState(true);
+  const [hasPendingSpin, setHasPendingSpin] = useState(false);
   const [winAnimation, setWinAnimation] = useState(false);
   const [winningSegmentIndex, setWinningSegmentIndex] = useState<number | null>(null);
   const wheelRef = useRef<HTMLDivElement>(null);

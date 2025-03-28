@@ -281,7 +281,15 @@ const AdminMenuItems = () => {
         <Button 
           className="mt-4 md:mt-0"
           onClick={() => {
-            resetNewItemForm();
+            setNewItem({
+              name: "",
+              description: "",
+              price: 0,
+              category_id: "",
+              preparation_time: "",
+              spicy_level: "",
+              image_url: ""
+            });
             setIsAddDialogOpen(true);
           }}
         >
@@ -594,7 +602,7 @@ const AdminMenuItems = () => {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddItem}>Add Item</Button>
+            <Button onClick={() => handleAddItem()}>Add Item</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -660,4 +668,3 @@ const resetNewItemForm = () => {
 };
 
 export default AdminMenuItems;
-

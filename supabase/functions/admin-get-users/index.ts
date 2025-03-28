@@ -15,20 +15,30 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Edge function invoked: admin-get-users");
+    
     // Create a Supabase client with the service role key
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     
     if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing environment variables:", {
+        hasUrl: Boolean(supabaseUrl),
+        hasKey: Boolean(supabaseServiceKey)
+      });
+      
       throw new Error("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set");
     }
 
+    console.log("Initializing Supabase admin client");
+    
     // Initialize the Supabase client with the service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // Get the user's JWT from the request
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("No authorization header provided");
       return new Response(
         JSON.stringify({ error: "No authorization header" }),
         {
@@ -40,9 +50,12 @@ serve(async (req) => {
 
     // Verify that the user is an admin
     const token = authHeader.replace("Bearer ", "");
+    console.log("Verifying user token");
+    
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !user) {
+      console.error("Invalid token or user not found:", userError);
       return new Response(
         JSON.stringify({ error: "Invalid token", details: userError }),
         {
@@ -52,13 +65,27 @@ serve(async (req) => {
       );
     }
 
+    console.log("Checking admin status for user:", user.id);
+    
     // Check if user is an admin
     const { data: isAdmin, error: isAdminError } = await supabase.rpc(
       "is_admin",
       { user_id: user.id }
     );
 
-    if (isAdminError || !isAdmin) {
+    if (isAdminError) {
+      console.error("Error checking admin status:", isAdminError);
+      return new Response(
+        JSON.stringify({ error: "Error checking admin status", details: isAdminError }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!isAdmin) {
+      console.error("User is not an admin:", user.id);
       return new Response(
         JSON.stringify({ error: "Not authorized as admin" }),
         {
@@ -68,12 +95,17 @@ serve(async (req) => {
       );
     }
 
+    console.log("Admin verification successful, fetching users");
+
     // Get all users from auth.users (using service role)
     const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
     
     if (authUsersError) {
+      console.error("Error fetching auth users:", authUsersError);
       throw new Error(`Error fetching auth users: ${authUsersError.message}`);
     }
+    
+    console.log(`Found ${authUsers.users.length} users, fetching profiles`);
 
     // Get all user profiles
     const { data: profiles, error: profilesError } = await supabase
@@ -81,8 +113,11 @@ serve(async (req) => {
       .select("*");
     
     if (profilesError) {
+      console.error("Error fetching profiles:", profilesError);
       throw new Error(`Error fetching profiles: ${profilesError.message}`);
     }
+
+    console.log(`Found ${profiles.length} profiles, fetching points`);
 
     // Get all user points
     const pointsPromises = profiles.map(async (profile) => {
@@ -105,6 +140,8 @@ serve(async (req) => {
       return acc;
     }, {});
 
+    console.log("Building combined user data");
+
     // Create a map of profiles for faster lookup
     const profilesMap = profiles.reduce((acc, profile) => {
       acc[profile.id] = profile;
@@ -124,6 +161,8 @@ serve(async (req) => {
         profile: profile
       };
     });
+
+    console.log(`Returning data for ${combinedUsers.length} users`);
 
     return new Response(
       JSON.stringify({ users: combinedUsers }),

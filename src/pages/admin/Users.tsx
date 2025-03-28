@@ -52,8 +52,16 @@ const AdminUsers = () => {
           throw new Error("No access token available");
         }
         
+        // Verify the URL is correctly formed
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        if (!supabaseUrl) {
+          throw new Error("VITE_SUPABASE_URL is not defined");
+        }
+        
+        console.log(`Calling edge function at: ${supabaseUrl}/functions/v1/admin-get-users`);
+        
         // Call our edge function to get users data
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-get-users`, {
+        const response = await fetch(`${supabaseUrl}/functions/v1/admin-get-users`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -61,23 +69,31 @@ const AdminUsers = () => {
           }
         });
         
+        // Check if the response is OK
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Failed to fetch users: ${errorData.error || response.statusText}`);
+          // Try to parse error JSON if possible
+          let errorMessage = `HTTP error! status: ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            // If we can't parse JSON, use text content as fallback
+            const textContent = await response.text();
+            console.error("Non-JSON response:", textContent.substring(0, 200) + "...");
+            errorMessage = `Failed to fetch users: ${response.statusText}. Response was not JSON.`;
+          }
+          throw new Error(errorMessage);
         }
         
-        const { users: userData } = await response.json();
+        // Parse the JSON response
+        const data = await response.json();
+        console.log("Retrieved user data:", data);
         
-        console.log("Retrieved user data:", userData);
-        
-        if (!userData || userData.length === 0) {
-          console.log("No users found");
-          setUsers([]);
-          setLoading(false);
-          return;
+        if (!data.users || !Array.isArray(data.users)) {
+          throw new Error("Invalid response format: users array missing");
         }
         
-        setUsers(userData);
+        setUsers(data.users);
       } catch (error: any) {
         console.error("Error fetching users:", error);
         setError(error.message || "Failed to load users");

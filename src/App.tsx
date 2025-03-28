@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +26,8 @@ import AdminCategories from "./pages/admin/Categories";
 import AdminOrders from "./pages/admin/Orders";
 import AdminAnalytics from "./pages/admin/Analytics";
 import AdminSettings from "./pages/admin/Settings";
+import AdminUsers from "./pages/admin/Users";
+import AdminSpinHistory from "./pages/admin/SpinHistory";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +85,8 @@ const AppContent = () => {
           <Route path="orders" element={<AdminOrders />} />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="settings" element={<AdminSettings />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="spins" element={<AdminSpinHistory />} />
         </Route>
         
         <Route path="*" element={<NotFound />} />

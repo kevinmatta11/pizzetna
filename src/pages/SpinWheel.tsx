@@ -17,12 +17,14 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from "@/integrations/supabase/client";
 
 const SpinWheel = () => {
   const { user, isLoading: authLoading } = useAuth();
   const [hasSpin, setHasSpin] = useState(false);
   const [hasSpunToday, setHasSpunToday] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,16 +40,28 @@ const SpinWheel = () => {
       
       setIsLoading(true);
       try {
-        const [pendingSpin, spunToday] = await Promise.all([
-          loyaltyService.checkPendingSpin(),
-          loyaltyService.hasSpunToday()
-        ]);
+        // Check if the user has a pending spin from an order
+        const { data: pendingSpin, error: pendingError } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('pending_spin', true)
+          .limit(1);
         
-        setHasSpin(pendingSpin);
-        setHasSpunToday(spunToday);
+        if (pendingError) throw pendingError;
         
-        // If user has no spin available and didn't come from an order, redirect them
-        if (!pendingSpin && !spunToday) {
+        // Check if the user has already spun today
+        const hasSpun = await loyaltyService.hasSpunToday();
+        
+        setHasSpin(pendingSpin && pendingSpin.length > 0);
+        setHasSpunToday(hasSpun);
+        
+        if (pendingSpin && pendingSpin.length > 0) {
+          setOrderId(pendingSpin[0].id);
+        }
+        
+        // If user has no spin available and hasn't spun today, redirect them
+        if ((!pendingSpin || pendingSpin.length === 0) && !hasSpun) {
           toast.error("You don't have any spins available. Place an order to earn a spin!");
           navigate('/loyalty');
         }
@@ -62,9 +76,17 @@ const SpinWheel = () => {
     checkSpinAvailability();
   }, [user, navigate]);
   
-  const handleSpinComplete = () => {
-    // Refresh spin availability after completion
+  const handleSpinComplete = (points: number) => {
+    // Success notification based on points won
+    if (points > 0) {
+      toast.success(`Congratulations! You won ${points} points!`);
+    } else {
+      toast.info("Try again next time!");
+    }
+    
+    // Refresh state
     setHasSpin(false);
+    setHasSpunToday(true);
   };
   
   if (authLoading || isLoading) {
@@ -113,6 +135,7 @@ const SpinWheel = () => {
                 <SpinningWheel 
                   onComplete={handleSpinComplete} 
                   hasSpinAvailable={hasSpin}
+                  orderId={orderId}
                 />
               </CardContent>
             </Card>

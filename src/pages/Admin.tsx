@@ -3,7 +3,10 @@ import { useState, useEffect } from "react";
 import { Navigate, Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, PizzaIcon, Tag, Package, ShoppingCart, BarChart2, Users, Settings, Menu } from "lucide-react";
+import { 
+  LayoutDashboard, PizzaIcon, Tag, Package, ShoppingCart, 
+  BarChart2, Users, Settings, Menu, User, Award
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,9 +80,11 @@ const AdminLayout = () => {
 
   const navItems = [
     { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+    { to: "/admin/users", label: "Users", icon: Users },
     { to: "/admin/menu", label: "Menu Items", icon: PizzaIcon },
     { to: "/admin/categories", label: "Categories", icon: Tag },
     { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
+    { to: "/admin/spins", label: "Wheel Spins", icon: Award },
     { to: "/admin/analytics", label: "Analytics", icon: BarChart2 },
     { to: "/admin/settings", label: "Settings", icon: Settings },
   ];

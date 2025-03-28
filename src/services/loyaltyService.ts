@@ -2,243 +2,161 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// Types
-export type TransactionType = 'earned' | 'redeemed';
-
-export interface LoyaltyTransaction {
+// Type definitions
+export type LoyaltyTransaction = {
   id: string;
   user_id: string;
   amount: number;
-  transaction_type: TransactionType;
-  description: string;
+  transaction_type: string;
+  description: string | null;
   order_id: string | null;
   created_at: string;
-}
+};
 
-// Service
+// Loyalty Service APIs
 export const loyaltyService = {
-  // Get current user's points balance
+  // Get the user's current loyalty points balance
   async getPointsBalance(): Promise<number> {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return 0;
-      
-      const { data, error } = await supabase
-        .from('loyalty_points')
-        .select('points_balance')
-        .eq('user_id', user.user.id)
-        .single();
+      const { data, error } = await supabase.rpc('get_user_points_balance');
       
       if (error) throw error;
-      return data?.points_balance || 0;
+      
+      return data || 0;
     } catch (error) {
       console.error("Error fetching points balance:", error);
       return 0;
     }
   },
   
-  // Get transaction history
+  // Get the user's loyalty transaction history
   async getTransactionHistory(): Promise<LoyaltyTransaction[]> {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return [];
-      
       const { data, error } = await supabase
         .from('loyalty_transactions')
         .select('*')
-        .eq('user_id', user.user.id)
         .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error("Error fetching transaction history:", error);
-        throw error;
-      }
-
-      // Cast the transaction_type to the correct type
-      return data.map(transaction => ({
-        ...transaction,
-        transaction_type: transaction.transaction_type as TransactionType
-      }));
+      
+      if (error) throw error;
+      
+      return data || [];
     } catch (error) {
-      console.error("Error in getTransactionHistory:", error);
+      console.error("Error fetching transaction history:", error);
       return [];
     }
   },
   
-  // Check if user has a pending spin
+  // Redeem points for a reward
+  async redeemPoints(pointsToRedeem: number, rewardDescription: string): Promise<number> {
+    try {
+      // Negative amount because points are being spent
+      const { data, error } = await supabase.rpc(
+        'add_loyalty_points',
+        {
+          points_to_add: -pointsToRedeem,
+          transaction_type: 'redemption',
+          description: rewardDescription
+        }
+      );
+      
+      if (error) throw error;
+      
+      return data || 0;
+    } catch (error: any) {
+      console.error("Error redeeming points:", error);
+      throw new Error(error.message || "Failed to redeem points");
+    }
+  },
+  
+  // Add points to a user's account
+  async addPoints(points: number, type: string, description?: string, orderId?: string): Promise<number> {
+    try {
+      const { data, error } = await supabase.rpc(
+        'add_loyalty_points',
+        {
+          points_to_add: points,
+          transaction_type: type,
+          description: description || null,
+          order_uuid: orderId || null
+        }
+      );
+      
+      if (error) throw error;
+      
+      return data || 0;
+    } catch (error: any) {
+      console.error("Error adding points:", error);
+      throw new Error(error.message || "Failed to add points");
+    }
+  },
+  
+  // Check if the user has a pending spin from an order
   async checkPendingSpin(): Promise<boolean> {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return false;
-      
-      // Check if there are any orders with pending_spin = true
       const { data, error } = await supabase
         .from('orders')
         .select('id')
-        .eq('user_id', user.user.id)
         .eq('pending_spin', true)
         .limit(1);
       
-      if (error) {
-        console.error("Error checking pending spin:", error);
-        throw error;
-      }
+      if (error) throw error;
       
       return data && data.length > 0;
     } catch (error) {
-      console.error("Error in checkPendingSpin:", error);
+      console.error("Error checking pending spin:", error);
       return false;
     }
   },
   
-  // Check if user has already spun today
+  // Mark a pending spin as used
+  async markSpinUsed(orderId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ pending_spin: false })
+        .eq('id', orderId);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error marking spin as used:", error);
+      throw error;
+    }
+  },
+  
+  // Check if the user has already spun the wheel today
   async hasSpunToday(): Promise<boolean> {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return false;
-      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
       const { data, error } = await supabase
         .from('loyalty_transactions')
         .select('created_at')
-        .eq('user_id', user.user.id)
-        .eq('transaction_type', 'earned')
-        .ilike('description', 'Wheel spin reward%')
+        .eq('transaction_type', 'wheel_spin')
         .gte('created_at', today.toISOString())
         .limit(1);
       
-      if (error) {
-        console.error("Error checking daily spin:", error);
-        throw error;
-      }
+      if (error) throw error;
       
       return data && data.length > 0;
     } catch (error) {
-      console.error("Error in hasSpunToday:", error);
+      console.error("Error checking if user has spun today:", error);
       return false;
     }
   },
   
-  // Mark spin as used
-  async markSpinAsUsed(): Promise<void> {
+  // Calculate a spin reward on the server side with weighted probabilities
+  async calculateSpinReward(): Promise<number> {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
-      
-      // Get the first order with pending spin
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('user_id', user.user.id)
-        .eq('pending_spin', true)
-        .limit(1)
-        .single();
-      
-      if (error) {
-        console.error("Error finding order with pending spin:", error);
-        return;
-      }
-      
-      // Update the order to mark the spin as used
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({ pending_spin: false })
-        .eq('id', data.id);
-      
-      if (updateError) {
-        console.error("Error marking spin as used:", updateError);
-      }
-    } catch (error) {
-      console.error("Error in markSpinAsUsed:", error);
-    }
-  },
-  
-  // Calculate spin reward on the server side
-  async getSpinReward(): Promise<number> {
-    try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("User not authenticated");
-      
-      // Check if user has a pending spin
-      const hasPendingSpin = await this.checkPendingSpin();
-      if (!hasPendingSpin) {
-        throw new Error("No pending spin available");
-      }
-      
-      // Check if user has already spun today
-      const hasSpunToday = await this.hasSpunToday();
-      if (hasSpunToday) {
-        throw new Error("You've already used your spin today");
-      }
-      
-      // Call the Supabase RPC function to calculate the reward
       const { data, error } = await supabase.rpc('calculate_spin_reward');
       
       if (error) throw error;
       
-      return data || 0;
+      // Ensure we only return a number
+      return typeof data === 'number' ? data : 0;
     } catch (error) {
-      console.error("Error getting spin reward:", error);
-      throw error;
-    }
-  },
-  
-  // Add points from wheel spin
-  async addPointsFromSpin(points: number): Promise<number> {
-    try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("User not authenticated");
-      
-      const { data, error } = await supabase.rpc(
-        'add_loyalty_points',
-        {
-          user_uuid: user.user.id,
-          points_to_add: points,
-          transaction_type: 'earned',
-          description: `Wheel spin reward: ${points} points`
-        }
-      );
-      
-      if (error) throw error;
-      
-      toast.success(`Congratulations! You earned ${points} loyalty points!`);
-      return data || 0;
-    } catch (error) {
-      console.error("Error adding points from spin:", error);
-      toast.error("Failed to add loyalty points");
-      return 0;
-    }
-  },
-  
-  // Redeem points for an order
-  async redeemPoints(points: number, orderId?: string): Promise<number> {
-    try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("User not authenticated");
-      
-      // Negative value for redemption
-      const pointsToRedeem = -Math.abs(points);
-      
-      const { data, error } = await supabase.rpc(
-        'add_loyalty_points',
-        {
-          user_uuid: user.user.id,
-          points_to_add: pointsToRedeem,
-          transaction_type: 'redeemed',
-          description: `Redeemed ${Math.abs(pointsToRedeem)} points for discount`,
-          order_uuid: orderId
-        }
-      );
-      
-      if (error) throw error;
-      
-      toast.success(`Successfully redeemed ${Math.abs(pointsToRedeem)} points!`);
-      return data || 0;
-    } catch (error) {
-      console.error("Error redeeming points:", error);
-      toast.error("Failed to redeem loyalty points");
+      console.error("Error calculating spin reward:", error);
+      // Default to "Try Again" (0 points) in case of error
       return 0;
     }
   }

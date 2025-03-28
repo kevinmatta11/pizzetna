@@ -1,9 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogIn, UserPlus, LogOut, User } from 'lucide-react';
+import { Menu, X, LogIn, UserPlus, LogOut, User, MapPin } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Cart } from '@/components/Cart';
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -75,16 +83,31 @@ const Header = () => {
           <div className="hidden md:flex items-center gap-2">
             {!isLoading && (
               user ? (
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" className="gap-2">
-                    <User className="h-4 w-4" />
-                    {user.email?.split('@')[0]}
-                  </Button>
-                  <Button onClick={handleSignOut} variant="outline" className="gap-2">
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                  </Button>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="gap-2">
+                      <User className="h-4 w-4" />
+                      {user.email?.split('@')[0]}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/addresses')}>
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Addresses
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/loyalty')}>
+                      <User className="h-4 w-4 mr-2" />
+                      Loyalty Points
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 <>
                   <Button variant="ghost" className="gap-2" onClick={() => navigate("/auth")}>
@@ -141,6 +164,14 @@ const Header = () => {
                           <User className="h-4 w-4" />
                           <span className="text-sm font-medium">{user.email?.split('@')[0]}</span>
                         </div>
+                        <Button variant="outline" className="gap-2 justify-start" onClick={() => navigate('/addresses')}>
+                          <MapPin className="h-4 w-4" />
+                          Addresses
+                        </Button>
+                        <Button variant="outline" className="gap-2 justify-start" onClick={() => navigate('/loyalty')}>
+                          <User className="h-4 w-4" />
+                          Loyalty Points
+                        </Button>
                         <Button onClick={handleSignOut} variant="outline" className="gap-2 justify-start">
                           <LogOut className="h-4 w-4" />
                           Logout

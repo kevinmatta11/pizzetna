@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { sendWhatsAppMessage, placePhoneCall } from "../_shared/notification-utils.ts";
+import { sendEmailNotification } from "../_shared/notification-utils.ts";
 import { 
   fetchOrderData, 
   fetchOrderItems, 
@@ -10,12 +10,8 @@ import {
 } from "./order-data.ts";
 import { formatOrderMessage } from "./message-formatter.ts";
 
-// Restaurant phone number (WhatsApp-enabled)
-const RESTAURANT_PHONE = "+96171104448";
-
-// Define a fallback phone number for testing if the main one fails
-// This should be configured in environment variables in production
-const FALLBACK_PHONE = Deno.env.get("TWILIO_FALLBACK_PHONE") || RESTAURANT_PHONE;
+// Restaurant owner email
+const RESTAURANT_EMAIL = "keevinmatta@gmail.com";
 
 interface OrderNotificationRequest {
   orderId: string;
@@ -49,40 +45,32 @@ serve(async (req) => {
       console.log("Order data and related information retrieved successfully");
       
       // Format message
-      const whatsappMessage = formatOrderMessage(
+      const emailBody = formatOrderMessage(
         orderData, 
         orderItems, 
         loyaltyData, 
         addressData
       );
       
-      console.log("Formatted WhatsApp message:", whatsappMessage);
+      console.log("Formatted email message:", emailBody);
       
-      // Check if the recipient phone is the same as the Twilio phone number
-      const twilioPhone = Deno.env.get("TWILIO_PHONE_NUMBER");
-      const phoneToUse = RESTAURANT_PHONE === twilioPhone ? FALLBACK_PHONE : RESTAURANT_PHONE;
+      // Send email notification
+      const emailSubject = `New Order #${orderData.id.substring(0, 8)} Received!`;
+      const emailResult = await sendEmailNotification(
+        RESTAURANT_EMAIL, 
+        emailSubject, 
+        emailBody
+      );
       
-      // Send WhatsApp notification
-      const whatsappResult = await sendWhatsAppMessage(phoneToUse, whatsappMessage);
-      console.log("WhatsApp notification result:", whatsappResult);
-      
-      let callResult = { success: false, error: "Not attempted" };
-      
-      // Only try to place a phone call if WhatsApp message failed or if explicitly requested
-      if (!whatsappResult.success || Deno.env.get("ALWAYS_CALL") === "true") {
-        // Place phone call for backup alert
-        callResult = await placePhoneCall(phoneToUse);
-        console.log("Phone call result:", callResult);
-      }
+      console.log("Email notification result:", emailResult);
       
       return new Response(
         JSON.stringify({ 
           success: true, 
-          whatsappSent: whatsappResult.success,
-          callPlaced: callResult.success,
-          message: whatsappResult.success 
+          emailSent: emailResult.success,
+          message: emailResult.success 
             ? "Order notification sent successfully" 
-            : "WhatsApp notification failed, but order was processed"
+            : "Email notification failed, but order was processed"
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

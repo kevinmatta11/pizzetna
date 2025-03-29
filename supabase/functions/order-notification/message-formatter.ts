@@ -27,6 +27,6 @@ export function formatOrderMessage(
     ? `\n🏠 Delivery Address: ${addressData.city}, ${addressData.address_line1}${addressData.address_line2 ? ', ' + addressData.address_line2 : ''}`
     : '\n🏠 Delivery Address: Customer will pick up the order';
   
-  // Compile WhatsApp message
+  // Compile email message
   return `📦 NEW ORDER RECEIVED!\n\n🧾 Order #${orderData.id.substring(0, 8)}:\n${formattedItems}${discountText}\n\n💰 Total: $${orderData.total_amount.toFixed(2)}${addressText}\n\n📋 Status: ${orderData.status}\n\nPlease confirm and prepare the order.`;
 }

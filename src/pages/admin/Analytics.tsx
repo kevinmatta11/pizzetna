@@ -3,101 +3,126 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   LineChart, Line, PieChart, Pie, Cell, Legend
 } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const COLORS = ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"];
 
 const AdminAnalytics = () => {
+  const { session } = useAuth();
   const [timeRange, setTimeRange] = useState("week");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // Mock data for demo purposes
-  const [salesOverTime, setSalesOverTime] = useState([
-    { name: "Mon", sales: 1200 },
-    { name: "Tue", sales: 1800 },
-    { name: "Wed", sales: 1400 },
-    { name: "Thu", sales: 2200 },
-    { name: "Fri", sales: 2800 },
-    { name: "Sat", sales: 3500 },
-    { name: "Sun", sales: 2900 }
-  ]);
+  const [analyticsData, setAnalyticsData] = useState({
+    salesOverTime: [],
+    salesByCategory: [],
+    topProducts: [],
+    hourlyOrders: []
+  });
   
-  const [salesByCategory, setSalesByCategory] = useState([
-    { name: "Classic", value: 35 },
-    { name: "Vegetarian", value: 20 },
-    { name: "Specialty", value: 30 },
-    { name: "Spicy", value: 18 },
-    { name: "Seafood", value: 12 },
-    { name: "Dessert", value: 8 }
-  ]);
-  
-  const [topProducts, setTopProducts] = useState([
-    { name: "Pepperoni", value: 120 },
-    { name: "Margherita", value: 98 },
-    { name: "BBQ Chicken", value: 86 },
-    { name: "Vegetarian", value: 75 },
-    { name: "Supreme", value: 65 }
-  ]);
-  
-  const [hourlyOrders, setHourlyOrders] = useState([
-    { hour: "8 AM", orders: 5 },
-    { hour: "9 AM", orders: 8 },
-    { hour: "10 AM", orders: 12 },
-    { hour: "11 AM", orders: 15 },
-    { hour: "12 PM", orders: 25 },
-    { hour: "1 PM", orders: 30 },
-    { hour: "2 PM", orders: 22 },
-    { hour: "3 PM", orders: 18 },
-    { hour: "4 PM", orders: 15 },
-    { hour: "5 PM", orders: 20 },
-    { hour: "6 PM", orders: 35 },
-    { hour: "7 PM", orders: 45 },
-    { hour: "8 PM", orders: 40 },
-    { hour: "9 PM", orders: 30 },
-    { hour: "10 PM", orders: 15 }
-  ]);
-
   useEffect(() => {
-    // In a real implementation, this would fetch data from Supabase
-    // Simulate data change based on selected time range
-    if (timeRange === "week") {
-      setSalesOverTime([
-        { name: "Mon", sales: 1200 },
-        { name: "Tue", sales: 1800 },
-        { name: "Wed", sales: 1400 },
-        { name: "Thu", sales: 2200 },
-        { name: "Fri", sales: 2800 },
-        { name: "Sat", sales: 3500 },
-        { name: "Sun", sales: 2900 }
-      ]);
-    } else if (timeRange === "month") {
-      setSalesOverTime([
-        { name: "Week 1", sales: 9800 },
-        { name: "Week 2", sales: 11200 },
-        { name: "Week 3", sales: 10500 },
-        { name: "Week 4", sales: 12500 }
-      ]);
-    } else if (timeRange === "year") {
-      setSalesOverTime([
-        { name: "Jan", sales: 38000 },
-        { name: "Feb", sales: 42000 },
-        { name: "Mar", sales: 47000 },
-        { name: "Apr", sales: 45000 },
-        { name: "May", sales: 48000 },
-        { name: "Jun", sales: 52000 },
-        { name: "Jul", sales: 58000 },
-        { name: "Aug", sales: 55000 },
-        { name: "Sep", sales: 50000 },
-        { name: "Oct", sales: 49000 },
-        { name: "Nov", sales: 51000 },
-        { name: "Dec", sales: 62000 }
-      ]);
+    const fetchAnalyticsData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        if (!session?.access_token) {
+          throw new Error("No access token available");
+        }
+        
+        // Get the Supabase URL from environment
+        const supabaseUrl = "https://rvduyqzejmmwwixtuevy.supabase.co";
+        
+        // Call our edge function to get analytics data with timeRange
+        const response = await fetch(`${supabaseUrl}/functions/v1/admin-get-stats?timeRange=${timeRange}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        setAnalyticsData({
+          salesOverTime: data.salesOverTime || [],
+          salesByCategory: data.salesByCategory || [],
+          topProducts: data.topSellingPizzas || [],
+          hourlyOrders: data.hourlyOrders || []
+        });
+      } catch (error: any) {
+        console.error("Error fetching analytics data:", error);
+        setError(error.message || "Failed to load analytics data");
+        toast.error("Failed to load analytics data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (session) {
+      fetchAnalyticsData();
     }
-  }, [timeRange]);
+  }, [session, timeRange]);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <div>
+            <Skeleton className="h-8 w-32 mb-2" />
+            <Skeleton className="h-4 w-60" />
+          </div>
+          <Skeleton className="h-10 w-40 mt-4 md:mt-0" />
+        </div>
+        <Skeleton className="h-10 w-full max-w-md mb-8" />
+        <Skeleton className="h-[400px] w-full mb-4" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+            <p className="text-muted-foreground">
+              Track your restaurant's performance metrics
+            </p>
+          </div>
+          <Link to="/">
+            <Button variant="outline" size="sm" className="mt-4 md:mt-0">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Main Site
+            </Button>
+          </Link>
+        </div>
+        <div className="p-6 border border-red-200 bg-red-50 rounded-lg text-red-800">
+          <h3 className="text-lg font-semibold mb-2">Error Loading Analytics</h3>
+          <p>{error}</p>
+          <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const { salesOverTime, salesByCategory, topProducts, hourlyOrders } = analyticsData;
 
   return (
     <div className="p-6">
@@ -109,7 +134,7 @@ const AdminAnalytics = () => {
           </p>
         </div>
         
-        <div className="mt-4 md:mt-0">
+        <div className="mt-4 md:mt-0 flex items-center gap-4">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select time range" />
@@ -120,6 +145,13 @@ const AdminAnalytics = () => {
               <SelectItem value="year">This Year</SelectItem>
             </SelectContent>
           </Select>
+          
+          <Link to="/">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Main Site
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -142,33 +174,39 @@ const AdminAnalytics = () => {
             </CardHeader>
             <CardContent>
               <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={salesOverTime}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="name" 
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis 
-                      tickFormatter={(value) => `$${value}`}
-                    />
-                    <Tooltip 
-                      formatter={(value) => [`$${value}`, "Sales"]}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="sales" 
-                      stroke="#8884d8" 
-                      activeDot={{ r: 8 }} 
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {salesOverTime.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={salesOverTime}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis 
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [`$${value}`, "Sales"]}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="sales" 
+                        stroke="#8884d8" 
+                        activeDot={{ r: 8 }} 
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground">
+                    No sales data available for this time period
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -185,28 +223,34 @@ const AdminAnalytics = () => {
             </CardHeader>
             <CardContent>
               <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={topProducts}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                    layout="vertical"
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis 
-                      dataKey="name" 
-                      type="category"
-                      width={100}
-                    />
-                    <Tooltip />
-                    <Bar 
-                      dataKey="value" 
-                      name="Sales" 
-                      fill="#8884d8" 
-                      radius={[0, 4, 4, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {topProducts.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={topProducts}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      layout="vertical"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category"
+                        width={100}
+                      />
+                      <Tooltip />
+                      <Bar 
+                        dataKey="value" 
+                        name="Quantity Sold" 
+                        fill="#8884d8" 
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground">
+                    No product data available for this time period
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -223,26 +267,32 @@ const AdminAnalytics = () => {
             </CardHeader>
             <CardContent>
               <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={salesByCategory}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={160}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {salesByCategory.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value}%`, "Percentage"]} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                {salesByCategory.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={salesByCategory}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={160}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {salesByCategory.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [`$${value.toFixed(2)}`, "Sales"]} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground">
+                    No category data available for this time period
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -259,28 +309,34 @@ const AdminAnalytics = () => {
             </CardHeader>
             <CardContent>
               <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={hourlyOrders}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="hour" 
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar 
-                      dataKey="orders" 
-                      name="Orders" 
-                      fill="#82ca9d" 
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {hourlyOrders.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={hourlyOrders}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="hour" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar 
+                        dataKey="orders" 
+                        name="Orders" 
+                        fill="#82ca9d" 
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground">
+                    No hourly data available for this time period
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

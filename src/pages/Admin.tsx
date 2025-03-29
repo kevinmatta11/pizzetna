@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   LayoutDashboard, PizzaIcon, Tag, Package, ShoppingCart, 
-  BarChart2, Users, Settings, Menu, User, Award
+  BarChart2, Users, Settings, Menu, ArrowLeft, Award
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -92,8 +92,8 @@ const AdminLayout = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 flex">
-        {/* Mobile menu button */}
-        <div className="md:hidden p-4">
+        {/* Mobile menu button and back button */}
+        <div className="md:hidden p-4 flex justify-between w-full">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon">
@@ -124,9 +124,28 @@ const AdminLayout = () => {
                     </Link>
                   );
                 })}
+                
+                <Separator className="my-4" />
+                
+                <Link to="/">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Main Site
+                  </Button>
+                </Link>
               </nav>
             </SheetContent>
           </Sheet>
+          
+          <Link to="/" className="md:hidden">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Main Site
+            </Button>
+          </Link>
         </div>
 
         {/* Desktop Sidebar */}
@@ -154,6 +173,18 @@ const AdminLayout = () => {
                 </Link>
               );
             })}
+            
+            <Separator className="my-4" />
+            
+            <Link to="/">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Main Site
+              </Button>
+            </Link>
           </nav>
         </div>
         

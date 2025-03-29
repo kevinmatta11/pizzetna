@@ -2,80 +2,138 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { PizzaIcon, ShoppingCart, DollarSign, TrendingUp } from "lucide-react";
+import { ChartContainer } from "@/components/ui/chart";
+import { PizzaIcon, ShoppingCart, DollarSign, TrendingUp, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const COLORS = ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"];
 
 const AdminDashboard = () => {
-  const [topSellingPizzas, setTopSellingPizzas] = useState([]);
-  const [recentOrders, setRecentOrders] = useState([]);
-  const [salesByCategory, setSalesByCategory] = useState([]);
-  const [totalStats, setTotalStats] = useState({
-    totalOrders: 0,
-    totalRevenue: 0,
-    averageOrderValue: 0,
-    totalMenuItems: 0
+  const { session } = useAuth();
+  const [dashboardData, setDashboardData] = useState({
+    totalStats: {
+      totalOrders: 0,
+      totalRevenue: 0,
+      averageOrderValue: 0,
+      totalMenuItems: 0
+    },
+    topSellingPizzas: [],
+    recentOrders: [],
+    salesByCategory: []
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // For now, we'll use mock data
-    // In a real implementation, you would fetch this from Supabase
-    
-    const mockTopSellingPizzas = [
-      { name: "Pepperoni", value: 120 },
-      { name: "Margherita", value: 98 },
-      { name: "BBQ Chicken", value: 86 },
-      { name: "Vegetarian", value: 75 },
-      { name: "Supreme", value: 65 }
-    ];
-    
-    const mockSalesByCategory = [
-      { name: "Classic", value: 350 },
-      { name: "Vegetarian", value: 200 },
-      { name: "Specialty", value: 300 },
-      { name: "Spicy", value: 180 },
-      { name: "Seafood", value: 120 },
-      { name: "Dessert", value: 80 }
-    ];
-    
-    const mockRecentOrders = [
-      { id: "ORD-001", customer: "John Doe", total: "$45.99", status: "Delivered", date: "2023-09-01" },
-      { id: "ORD-002", customer: "Jane Smith", total: "$32.50", status: "Processing", date: "2023-09-01" },
-      { id: "ORD-003", customer: "Bob Johnson", total: "$78.25", status: "Pending", date: "2023-09-01" },
-      { id: "ORD-004", customer: "Alice Brown", total: "$56.75", status: "Delivered", date: "2023-08-31" },
-      { id: "ORD-005", customer: "Charlie Wilson", total: "$29.99", status: "Delivered", date: "2023-08-31" }
-    ];
-    
-    // Set the mock data
-    setTopSellingPizzas(mockTopSellingPizzas);
-    setSalesByCategory(mockSalesByCategory);
-    setRecentOrders(mockRecentOrders);
-    setTotalStats({
-      totalOrders: 256,
-      totalRevenue: 12890.75,
-      averageOrderValue: 50.35,
-      totalMenuItems: 42
-    });
-    
-    setLoading(false);
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        if (!session?.access_token) {
+          throw new Error("No access token available");
+        }
+        
+        // Get the Supabase URL from environment
+        const supabaseUrl = "https://rvduyqzejmmwwixtuevy.supabase.co";
+        
+        // Call our edge function to get dashboard data
+        const response = await fetch(`${supabaseUrl}/functions/v1/admin-get-stats`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setDashboardData(data);
+      } catch (error: any) {
+        console.error("Error fetching dashboard data:", error);
+        setError(error.message || "Failed to load dashboard data");
+        toast.error("Failed to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // In a real implementation, you would fetch data from Supabase
-    // const fetchDashboardData = async () => {
-    //   try {
-    //     // Fetch data from Supabase here
-    //   } catch (error) {
-    //     console.error("Error fetching dashboard data:", error);
-    //   } finally {
-    //     setLoading(false);
-    //   }
-    // };
-    
-    // fetchDashboardData();
-  }, []);
+    if (session) {
+      fetchDashboardData();
+    }
+  }, [session]);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <div>
+            <Skeleton className="h-8 w-40 mb-2" />
+            <Skeleton className="h-4 w-60" />
+          </div>
+          <Link to="/">
+            <Button variant="outline" size="sm" className="mt-4 md:mt-0">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Main Site
+            </Button>
+          </Link>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <Skeleton className="h-5 w-24 mb-2" />
+                <Skeleton className="h-8 w-20 mb-1" />
+                <Skeleton className="h-3 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Skeleton className="h-[350px] w-full mb-8" />
+        <Skeleton className="h-[200px] w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Overview of your restaurant performance
+            </p>
+          </div>
+          <Link to="/">
+            <Button variant="outline" size="sm" className="mt-4 md:mt-0">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Main Site
+            </Button>
+          </Link>
+        </div>
+        <div className="p-6 border border-red-200 bg-red-50 rounded-lg text-red-800">
+          <h3 className="text-lg font-semibold mb-2">Error Loading Dashboard</h3>
+          <p>{error}</p>
+          <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const { totalStats, topSellingPizzas, recentOrders, salesByCategory } = dashboardData;
 
   return (
     <div className="p-6">
@@ -86,6 +144,12 @@ const AdminDashboard = () => {
             Overview of your restaurant performance
           </p>
         </div>
+        <Link to="/">
+          <Button variant="outline" size="sm" className="mt-4 md:mt-0">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Main Site
+          </Button>
+        </Link>
       </div>
 
       {/* Stats overview */}
@@ -101,7 +165,7 @@ const AdminDashboard = () => {
             <div className="pt-2">
               <h2 className="text-3xl font-bold">{totalStats.totalOrders}</h2>
               <p className="text-xs text-muted-foreground">
-                +12% from last month
+                From all time
               </p>
             </div>
           </CardContent>
@@ -116,9 +180,9 @@ const AdminDashboard = () => {
               <DollarSign className="h-5 w-5 text-muted-foreground" />
             </div>
             <div className="pt-2">
-              <h2 className="text-3xl font-bold">${totalStats.totalRevenue.toLocaleString()}</h2>
+              <h2 className="text-3xl font-bold">${totalStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
               <p className="text-xs text-muted-foreground">
-                +8% from last month
+                From all orders
               </p>
             </div>
           </CardContent>
@@ -133,9 +197,9 @@ const AdminDashboard = () => {
               <TrendingUp className="h-5 w-5 text-muted-foreground" />
             </div>
             <div className="pt-2">
-              <h2 className="text-3xl font-bold">${totalStats.averageOrderValue.toFixed(2)}</h2>
+              <h2 className="text-3xl font-bold">${totalStats.averageOrderValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
               <p className="text-xs text-muted-foreground">
-                +2% from last month
+                Per order
               </p>
             </div>
           </CardContent>
@@ -152,7 +216,7 @@ const AdminDashboard = () => {
             <div className="pt-2">
               <h2 className="text-3xl font-bold">{totalStats.totalMenuItems}</h2>
               <p className="text-xs text-muted-foreground">
-                +5 new items
+                Active products
               </p>
             </div>
           </CardContent>
@@ -213,7 +277,7 @@ const AdminDashboard = () => {
                                       Sales
                                     </span>
                                     <span className="font-bold">
-                                      {payload[0].payload.value}
+                                      ${payload[0].payload.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                   </div>
                                 </div>
@@ -274,7 +338,7 @@ const AdminDashboard = () => {
                                 </div>
                                 <div className="flex flex-col">
                                   <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                    Sales
+                                    Quantity
                                   </span>
                                   <span className="font-bold">
                                     {payload[0].value}
@@ -314,27 +378,35 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.map((order, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="py-3 px-4">{order.id}</td>
-                    <td className="py-3 px-4">{order.customer}</td>
-                    <td className="py-3 px-4">{order.date}</td>
-                    <td className="py-3 px-4">{order.total}</td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-block px-2 py-1 text-xs rounded-full ${
-                          order.status === "Delivered"
-                            ? "bg-green-100 text-green-800"
-                            : order.status === "Processing"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {order.status}
-                      </span>
+                {recentOrders.length > 0 ? (
+                  recentOrders.map((order, index) => (
+                    <tr key={index} className="border-b">
+                      <td className="py-3 px-4">{order.id}</td>
+                      <td className="py-3 px-4">{order.customer}</td>
+                      <td className="py-3 px-4">{order.date}</td>
+                      <td className="py-3 px-4">{order.total}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-block px-2 py-1 text-xs rounded-full ${
+                            order.status === "delivered"
+                              ? "bg-green-100 text-green-800"
+                              : order.status === "processing"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center text-muted-foreground">
+                      No recent orders found
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

@@ -298,6 +298,38 @@ export type Database = {
         }
         Returns: number
       }
+      get_hourly_orders: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          hour_of_day: string
+          order_count: number
+        }[]
+      }
+      get_sales_by_category: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          category_name: string
+          total_sales: number
+        }[]
+      }
+      get_sales_over_time: {
+        Args: {
+          time_range: string
+        }
+        Returns: {
+          time_period: string
+          total_sales: number
+        }[]
+      }
+      get_top_selling_items: {
+        Args: {
+          limit_count: number
+        }
+        Returns: {
+          item_name: string
+          quantity_sold: number
+        }[]
+      }
       get_user_points_balance: {
         Args: {
           user_uuid: string

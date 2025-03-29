@@ -284,7 +284,7 @@ const AdminAnalytics = () => {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => [`$${value.toFixed(2)}`, "Sales"]} />
+                      <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, "Sales"]} />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>

@@ -18,7 +18,17 @@ export async function sendWhatsAppMessage(to: string, body: string) {
     
     // Format to WhatsApp format if not already formatted
     const toWhatsApp = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
-    const fromWhatsApp = fromNumber.startsWith("whatsapp:") ? fromNumber : `whatsapp:${fromNumber}`;
+    // Make sure "from" number is different from "to" number to avoid error 63031
+    const fromWhatsApp = `whatsapp:${fromNumber}`;
+    
+    // Check if to and from are the same, and abort if so
+    if (toWhatsApp === fromWhatsApp) {
+      console.error("Cannot send WhatsApp message to the same number as the sender");
+      return { 
+        success: false, 
+        error: "Cannot send WhatsApp message to the same number as the sender. Configure a different sender number." 
+      };
+    }
     
     const credentials = btoa(`${accountSid}:${authToken}`);
     
@@ -59,6 +69,12 @@ export async function placePhoneCall(to: string) {
       return { success: false, error: "Missing Twilio credentials" };
     }
     
+    // Check if international permissions are likely to be an issue
+    const isInternational = !to.startsWith('+1'); // Assuming US-based account
+    if (isInternational) {
+      console.log("Attempting international call - this requires specific Twilio permissions");
+    }
+    
     const credentials = btoa(`${accountSid}:${authToken}`);
     
     // Twiml for a simple voice message
@@ -81,6 +97,16 @@ export async function placePhoneCall(to: string) {
     );
     
     const result = await response.json();
+    
+    // If there's a geo-permissions issue, provide more specific error message
+    if (!response.ok && result?.code === 21215) {
+      console.error("Twilio international calling permissions required:", result.message);
+      return { 
+        success: false, 
+        error: "International calling permissions not enabled on this Twilio account. Enable them at: https://www.twilio.com/console/voice/calls/geo-permissions/low-risk"
+      };
+    }
+    
     return { success: response.ok, result };
     
   } catch (error) {

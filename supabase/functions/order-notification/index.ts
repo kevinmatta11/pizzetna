@@ -13,6 +13,10 @@ import { formatOrderMessage } from "./message-formatter.ts";
 // Restaurant phone number (WhatsApp-enabled)
 const RESTAURANT_PHONE = "+96171104448";
 
+// Define a fallback phone number for testing if the main one fails
+// This should be configured in environment variables in production
+const FALLBACK_PHONE = Deno.env.get("TWILIO_FALLBACK_PHONE") || RESTAURANT_PHONE;
+
 interface OrderNotificationRequest {
   orderId: string;
 }
@@ -42,6 +46,8 @@ serve(async (req) => {
       const loyaltyData = await fetchLoyaltyData(orderId);
       const addressData = await fetchAddressData(orderData.user_id);
       
+      console.log("Order data and related information retrieved successfully");
+      
       // Format message
       const whatsappMessage = formatOrderMessage(
         orderData, 
@@ -52,26 +58,41 @@ serve(async (req) => {
       
       console.log("Formatted WhatsApp message:", whatsappMessage);
       
+      // Check if the recipient phone is the same as the Twilio phone number
+      const twilioPhone = Deno.env.get("TWILIO_PHONE_NUMBER");
+      const phoneToUse = RESTAURANT_PHONE === twilioPhone ? FALLBACK_PHONE : RESTAURANT_PHONE;
+      
       // Send WhatsApp notification
-      const whatsappResult = await sendWhatsAppMessage(RESTAURANT_PHONE, whatsappMessage);
+      const whatsappResult = await sendWhatsAppMessage(phoneToUse, whatsappMessage);
       console.log("WhatsApp notification result:", whatsappResult);
       
-      // Place phone call for backup alert
-      const callResult = await placePhoneCall(RESTAURANT_PHONE);
-      console.log("Phone call result:", callResult);
+      let callResult = { success: false, error: "Not attempted" };
+      
+      // Only try to place a phone call if WhatsApp message failed or if explicitly requested
+      if (!whatsappResult.success || Deno.env.get("ALWAYS_CALL") === "true") {
+        // Place phone call for backup alert
+        callResult = await placePhoneCall(phoneToUse);
+        console.log("Phone call result:", callResult);
+      }
       
       return new Response(
         JSON.stringify({ 
           success: true, 
           whatsappSent: whatsappResult.success,
-          callPlaced: callResult.success
+          callPlaced: callResult.success,
+          message: whatsappResult.success 
+            ? "Order notification sent successfully" 
+            : "WhatsApp notification failed, but order was processed"
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (error) {
       console.error("Error processing order notification:", error);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ 
+          error: error.message,
+          details: "Error occurred while processing order notification"
+        }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500

@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserWithLoyalty } from "@/types/user";
+import { useNavigate } from "react-router-dom";
 
 export const useUsersManagement = () => {
   const { user, session } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserWithLoyalty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +20,7 @@ export const useUsersManagement = () => {
   const [adjustmentReason, setAdjustmentReason] = useState<string>("");
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
 
-  // Fetch users on load
+  // Fetch users on load or when auth state changes
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
@@ -27,8 +29,15 @@ export const useUsersManagement = () => {
       try {
         console.log("Starting to fetch users...");
         
+        if (!user) {
+          throw new Error("You must be logged in to access this page");
+        }
+        
         if (!session?.access_token) {
-          throw new Error("No access token available");
+          // If no session but user exists, likely the session expired
+          toast.error("Your session has expired. Please log in again.");
+          navigate("/auth");
+          return;
         }
         
         // Get the Supabase URL from environment
@@ -39,7 +48,7 @@ export const useUsersManagement = () => {
         
         console.log(`Calling edge function at: ${supabaseUrl}/functions/v1/admin-get-users`);
         
-        // Call our edge function to get users data
+        // Call our edge function to get users data with fresh access token
         const response = await fetch(`${supabaseUrl}/functions/v1/admin-get-users`, {
           method: 'GET',
           headers: {
@@ -58,6 +67,13 @@ export const useUsersManagement = () => {
             try {
               const errorData = await response.json();
               errorMessage = errorData.error || errorMessage;
+              
+              // If unauthorized, redirect to login
+              if (response.status === 401 || response.status === 403) {
+                toast.error("You don't have permission to access this page");
+                navigate("/auth");
+                return;
+              }
             } catch (e) {
               console.error("Error parsing JSON response:", e);
             }
@@ -88,10 +104,15 @@ export const useUsersManagement = () => {
       }
     };
 
+    // Only fetch if user is present
     if (user) {
       fetchUsers();
+    } else {
+      // If no user, we're likely not logged in
+      setLoading(false);
+      setError("You must be logged in to access this page");
     }
-  }, [user, session]);
+  }, [user, session, navigate]);
 
   // Handle adjusting user points
   const handleAdjustPoints = async () => {

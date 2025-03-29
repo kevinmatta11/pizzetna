@@ -68,50 +68,8 @@ const UsersTable: React.FC<UsersTableProps> = ({
       : <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
-  if (loading) {
-    return (
-      <TableRow>
-        <TableCell colSpan={5} className="text-center py-8 h-[200px]">
-          <div className="flex flex-col items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
-            <span className="text-muted-foreground">Loading users...</span>
-          </div>
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  if (error) {
-    return (
-      <TableRow>
-        <TableCell colSpan={5} className="text-center py-8 h-[200px]">
-          <div className="flex flex-col items-center justify-center text-muted-foreground">
-            <AlertCircle className="h-8 w-8 mb-2" />
-            <p>Failed to load users</p>
-            <p className="text-sm mt-1">{error}</p>
-          </div>
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  if (filteredUsers.length === 0) {
-    return (
-      <TableRow>
-        <TableCell colSpan={5} className="text-center py-8 h-[200px]">
-          <div className="flex flex-col items-center justify-center text-muted-foreground">
-            <AlertCircle className="h-8 w-8 mb-2" />
-            <p>No users found</p>
-            <p className="text-sm mt-1">
-              {searchQuery ? "Try a different search term" : "There are no users in the system yet"}
-            </p>
-          </div>
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  return (
+  // Full table with headers
+  const TableWithHeaders = () => (
     <Table>
       <TableHeader>
         <TableRow>
@@ -139,6 +97,43 @@ const UsersTable: React.FC<UsersTableProps> = ({
         </TableRow>
       </TableHeader>
       <TableBody>
+        {loading && (
+          <TableRow>
+            <TableCell colSpan={5} className="text-center py-8 h-[200px]">
+              <div className="flex flex-col items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
+                <span className="text-muted-foreground">Loading users...</span>
+              </div>
+            </TableCell>
+          </TableRow>
+        )}
+        
+        {error && (
+          <TableRow>
+            <TableCell colSpan={5} className="text-center py-8 h-[200px]">
+              <div className="flex flex-col items-center justify-center text-muted-foreground">
+                <AlertCircle className="h-8 w-8 mb-2" />
+                <p>Failed to load users</p>
+                <p className="text-sm mt-1">{error}</p>
+              </div>
+            </TableCell>
+          </TableRow>
+        )}
+
+        {!loading && !error && filteredUsers.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={5} className="text-center py-8 h-[200px]">
+              <div className="flex flex-col items-center justify-center text-muted-foreground">
+                <AlertCircle className="h-8 w-8 mb-2" />
+                <p>No users found</p>
+                <p className="text-sm mt-1">
+                  {searchQuery ? "Try a different search term" : "There are no users in the system yet"}
+                </p>
+              </div>
+            </TableCell>
+          </TableRow>
+        )}
+
         {filteredUsers.map((user) => (
           <TableRow key={user.id}>
             <TableCell>{user.email}</TableCell>
@@ -163,6 +158,8 @@ const UsersTable: React.FC<UsersTableProps> = ({
       </TableBody>
     </Table>
   );
+
+  return <TableWithHeaders />;
 };
 
 export default UsersTable;

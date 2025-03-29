@@ -60,7 +60,7 @@ export const PaymentForm = ({ totalAmount, onSuccess }: { totalAmount: string, o
       setIsComplete(true);
       toast({
         title: "Payment Successful",
-        description: "Your order has been placed successfully!",
+        description: "Your order is being processed.",
       });
       
       // Wait a moment before closing

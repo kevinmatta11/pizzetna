@@ -21,7 +21,20 @@ serve(async (req) => {
 
   try {
     // Get request data
-    const { userId, totalAmount, items } = await req.json() as OrderRequest;
+    const data = await req.json();
+    const { userId, totalAmount, items } = data as OrderRequest;
+    
+    // Validate required fields
+    if (!totalAmount || !items || !Array.isArray(items) || items.length === 0) {
+      console.error("Missing required order data:", { totalAmount, itemsCount: items?.length });
+      return new Response(
+        JSON.stringify({ error: "Missing required order data" }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        }
+      );
+    }
     
     // Create Supabase client with admin privileges
     const supabaseAdmin = createClient(
@@ -109,7 +122,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ error: "Internal Server Error" }),
+      JSON.stringify({ error: "Internal Server Error", details: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500

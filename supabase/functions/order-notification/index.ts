@@ -37,34 +37,10 @@ serve(async (req) => {
     
     console.log(`Preparing notification for order: ${orderId}`);
     
-    // Get order details with customer information and items
+    // Get basic order details first without any joins
     const { data: orderData, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select(`
-        id,
-        total_amount,
-        pending_spin,
-        user_addresses!left(
-          full_name,
-          address_line1,
-          address_line2,
-          city,
-          state,
-          postal_code,
-          phone
-        ),
-        order_items!left(
-          quantity,
-          price,
-          menu_items!left(
-            name
-          )
-        ),
-        loyalty_transactions!left(
-          amount,
-          transaction_type
-        )
-      `)
+      .select('id, total_amount, pending_spin, status, user_id')
       .eq('id', orderId)
       .single();
     
@@ -76,30 +52,77 @@ serve(async (req) => {
       });
     }
     
-    console.log("Order data retrieved successfully");
+    // Fetch order items in a separate query
+    const { data: orderItems, error: itemsError } = await supabaseAdmin
+      .from('order_items')
+      .select(`
+        quantity,
+        price,
+        menu_item_id,
+        menu_items(name)
+      `)
+      .eq('order_id', orderId);
+    
+    if (itemsError) {
+      console.error("Error fetching order items:", itemsError);
+      return new Response(JSON.stringify({ error: "Failed to fetch order items" }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      });
+    }
+    
+    // Fetch loyalty transaction data separately
+    const { data: loyaltyData, error: loyaltyError } = await supabaseAdmin
+      .from('loyalty_transactions')
+      .select('amount, transaction_type')
+      .eq('order_id', orderId);
+    
+    if (loyaltyError) {
+      console.error("Error fetching loyalty data:", loyaltyError);
+      // Continue with the process, loyalty data is non-critical
+    }
+
+    // If there's a user_id, try to fetch their address
+    let addressData = null;
+    if (orderData.user_id) {
+      const { data: addresses, error: addressError } = await supabaseAdmin
+        .from('user_addresses')
+        .select('full_name, address_line1, address_line2, city, state, postal_code, phone')
+        .eq('user_id', orderData.user_id)
+        .eq('is_default', true)
+        .limit(1);
+        
+      if (!addressError && addresses && addresses.length > 0) {
+        addressData = addresses[0];
+      } else {
+        console.log("No default address found or error fetching address:", addressError);
+      }
+    }
+    
+    console.log("Order data and related information retrieved successfully");
     
     // Format order items
-    const formattedItems = orderData.order_items.map(item => 
-      `- ${item.menu_items?.name ?? 'Unknown item'} x${item.quantity}`
-    ).join('\n');
+    const formattedItems = orderItems.map(item => {
+      const itemName = item.menu_items?.name || 'Unknown item';
+      return `- ${itemName} x${item.quantity}`;
+    }).join('\n');
     
     // Calculate discount if any
-    const loyaltyDiscount = orderData.loyalty_transactions
+    const loyaltyDiscount = loyaltyData
       ?.filter(t => t.transaction_type === 'redeem')
       .reduce((sum, t) => sum + t.amount, 0) ?? 0;
     
     const discountText = loyaltyDiscount > 0 
-      ? `\n🎁 Discounts Applied:\n- Loyalty Points: $${loyaltyDiscount.toFixed(2)}`
+      ? `\n🎁 Discounts Applied:\n- Loyalty Points: $${Math.abs(loyaltyDiscount).toFixed(2)}`
       : '';
     
     // Format address
-    const addressData = orderData.user_addresses?.[0];
     const addressText = addressData 
       ? `\n🏠 Delivery Address: ${addressData.city}, ${addressData.address_line1}${addressData.address_line2 ? ', ' + addressData.address_line2 : ''}`
       : '\n🏠 Delivery Address: Customer will pick up the order';
     
     // Compile WhatsApp message
-    const whatsappMessage = `📦 NEW ORDER RECEIVED!\n\n🧾 Order:\n${formattedItems}${discountText}\n\n💰 Total: $${orderData.total_amount.toFixed(2)}${addressText}\n\nPlease confirm and prepare the order.`;
+    const whatsappMessage = `📦 NEW ORDER RECEIVED!\n\n🧾 Order #${orderData.id.substring(0, 8)}:\n${formattedItems}${discountText}\n\n💰 Total: $${orderData.total_amount.toFixed(2)}${addressText}\n\n📋 Status: ${orderData.status}\n\nPlease confirm and prepare the order.`;
     
     console.log("Formatted WhatsApp message:", whatsappMessage);
     

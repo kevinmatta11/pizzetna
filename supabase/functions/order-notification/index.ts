@@ -10,7 +10,7 @@ import {
 } from "./order-data.ts";
 import { formatOrderMessage } from "./message-formatter.ts";
 
-// Restaurant owner email
+// Restaurant owner email - hardcoded for reliability
 const RESTAURANT_EMAIL = "keevinmatta@gmail.com";
 
 interface OrderNotificationRequest {

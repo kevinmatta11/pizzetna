@@ -17,6 +17,10 @@ export async function sendEmailNotification(to: string, subject: string, body: s
       return { success: false, error: "Missing EmailJS credentials" };
     }
     
+    console.log("Sending email notification to:", to);
+    console.log("With subject:", subject);
+    console.log("Message body:", body);
+    
     // Prepare the payload for EmailJS
     const data = {
       service_id: emailjsServiceId,
@@ -39,11 +43,17 @@ export async function sendEmailNotification(to: string, subject: string, body: s
       body: JSON.stringify(data)
     });
     
-    const result = response.status === 200 ? { success: true } : { success: false, error: `Error ${response.status}` };
-    return result;
+    if (response.status === 200) {
+      console.log("Email sent successfully to:", to);
+      return { success: true };
+    } else {
+      const errorText = await response.text();
+      console.error("Error sending email notification. Status:", response.status, "Response:", errorText);
+      return { success: false, error: `Error ${response.status}: ${errorText}` };
+    }
     
   } catch (error) {
-    console.error("Error sending email notification:", error);
+    console.error("Exception sending email notification:", error);
     return { success: false, error: error.message };
   }
 }

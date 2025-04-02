@@ -129,18 +129,18 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
 
   return (
     <div ref={confettiRef} className="flex flex-col items-center justify-center gap-6 py-6 relative">
-      <div className="text-center mb-2 text-brunch-600">
+      <div className="text-center mb-2 text-pizzetna-600">
         <p className="font-medium">Spin the wheel to win loyalty points!</p>
       </div>
       
       <div className="relative">
         <div className="absolute top-[-25px] left-1/2 transform -translate-x-1/2 z-10">
-          <div className="w-0 h-0 border-l-[18px] border-r-[18px] border-t-[35px] border-l-transparent border-r-transparent border-t-brunch-600 drop-shadow-md" />
+          <div className="w-0 h-0 border-l-[18px] border-r-[18px] border-t-[35px] border-l-transparent border-r-transparent border-t-pizzetna-600 drop-shadow-md" />
         </div>
 
         <motion.div
           ref={wheelRef}
-          className="w-[320px] h-[320px] rounded-full overflow-hidden relative border-[10px] border-brunch-600 shadow-lg"
+          className="w-[320px] h-[320px] rounded-full overflow-hidden relative border-[10px] border-pizzetna-600 shadow-lg"
           animate={{ rotate: rotation }}
           transition={{ duration: 5, type: "spring", damping: 30 }}
           style={{ transform: `rotate(${rotation}deg)` }}
@@ -203,13 +203,13 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
           </svg>
         </motion.div>
 
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-brunch-600 flex items-center justify-center shadow-md">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 w-20 h-20 rounded-full bg-pizzetna-600 flex items-center justify-center shadow-md">
           <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center">
-            <span className="text-brunch-800 font-bold text-sm flex items-center">
+            <span className="text-pizzetna-800 font-bold text-sm flex items-center">
               {isSpinning ? (
-                <RotateCw className="h-5 w-5 animate-spin text-brunch-600" />
+                <RotateCw className="h-5 w-5 animate-spin text-pizzetna-600" />
               ) : (
-                <span className="text-brunch-700 font-bold">SPIN</span>
+                <span className="text-pizzetna-700 font-bold">SPIN</span>
               )}
             </span>
           </div>
@@ -219,7 +219,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
       <Button
         onClick={spinWheel}
         disabled={isSpinning || !hasSpinAvailable}
-        className={`${isSpinning ? 'bg-brunch-400' : 'bg-brunch-500 hover:bg-brunch-600'} text-white font-bold px-8 py-6 rounded-full shadow-md transition-all duration-300 relative overflow-hidden flex items-center gap-2`}
+        className={`${isSpinning ? 'bg-pizzetna-400' : 'bg-pizzetna-500 hover:bg-pizzetna-600'} text-white font-bold px-8 py-6 rounded-full shadow-md transition-all duration-300 relative overflow-hidden flex items-center gap-2`}
       >
         {isSpinning ? (
           <>
@@ -242,7 +242,7 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
       <AnimatePresence>
         {result !== null && winningSegmentIndex !== null && (
           <motion.div 
-            className="mt-4 text-center p-4 rounded-lg bg-white shadow-md border border-brunch-100"
+            className="mt-4 text-center p-4 rounded-lg bg-white shadow-md border border-pizzetna-100"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
@@ -256,20 +256,20 @@ export const SpinningWheel: React.FC<SpinningWheelProps> = ({
                 >
                   <Trophy className="h-8 w-8 text-yellow-500 mb-2" />
                 </motion.div>
-                <h3 className="text-xl font-bold text-brunch-700">
+                <h3 className="text-xl font-bold text-pizzetna-700">
                   Congratulations!
                 </h3>
-                <p className="text-brunch-600">
-                  You won <span className="font-bold text-brunch-700">{result} points</span>!
+                <p className="text-pizzetna-600">
+                  You won <span className="font-bold text-pizzetna-700">{result} points</span>!
                 </p>
               </div>
             ) : (
               <div className="flex flex-col items-center">
                 <div className="mb-2 text-2xl">🎲</div>
-                <h3 className="text-xl font-bold text-brunch-700">
+                <h3 className="text-xl font-bold text-pizzetna-700">
                   Better luck next time!
                 </h3>
-                <p className="text-brunch-500">Try again after your next order.</p>
+                <p className="text-pizzetna-500">Try again after your next order.</p>
               </div>
             )}
           </motion.div>

@@ -156,13 +156,13 @@ export const Cart = () => {
     ({ children }, ref) => (
       <Button 
         variant="outline" 
-        className="relative p-2 bg-white border-brunch-200"
+        className="relative p-2 bg-white border-pizzetna-200"
         onClick={() => setOpen(true)}
         ref={ref}
       >
-        <ShoppingCart className="h-5 w-5 text-brunch-700" />
+        <ShoppingCart className="h-5 w-5 text-pizzetna-700" />
         {totalItems > 0 && (
-          <span className="absolute -top-2 -right-2 bg-brunch-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+          <span className="absolute -top-2 -right-2 bg-pizzetna-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
             {totalItems}
           </span>
         )}
@@ -176,24 +176,24 @@ export const Cart = () => {
     <div className="flex flex-col gap-4 py-4 overflow-auto max-h-[50vh]">
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <ShoppingCart className="h-12 w-12 text-brunch-300 mb-4" />
-          <h3 className="text-lg font-medium text-brunch-700 mb-2">Your cart is empty</h3>
-          <p className="text-sm text-brunch-500">Add some delicious pizzas to get started!</p>
+          <ShoppingCart className="h-12 w-12 text-pizzetna-300 mb-4" />
+          <h3 className="text-lg font-medium text-pizzetna-700 mb-2">Your cart is empty</h3>
+          <p className="text-sm text-pizzetna-500">Add some delicious pizzas to get started!</p>
         </div>
       ) : (
         items.map((item) => (
           <div key={item.id} className="flex items-center gap-3 py-2">
-            <div className="h-16 w-16 rounded-md overflow-hidden bg-brunch-100 flex-shrink-0">
+            <div className="h-16 w-16 rounded-md overflow-hidden bg-pizzetna-100 flex-shrink-0">
               <img src={item.imageSrc} alt={item.name} className="h-full w-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-sm text-brunch-900 truncate">{item.name}</h4>
-              <p className="text-sm font-semibold text-brunch-700">${(item.price * item.quantity).toFixed(2)}</p>
+              <h4 className="font-medium text-sm text-pizzetna-900 truncate">{item.name}</h4>
+              <p className="text-sm font-semibold text-pizzetna-700">${(item.price * item.quantity).toFixed(2)}</p>
               <div className="flex items-center mt-1">
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="h-6 w-6 rounded-full border-brunch-200"
+                  className="h-6 w-6 rounded-full border-pizzetna-200"
                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
                 >
                   <Minus className="h-3 w-3" />
@@ -202,7 +202,7 @@ export const Cart = () => {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="h-6 w-6 rounded-full border-brunch-200"
+                  className="h-6 w-6 rounded-full border-pizzetna-200"
                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
                 >
                   <Plus className="h-3 w-3" />
@@ -212,7 +212,7 @@ export const Cart = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-8 w-8 text-brunch-400 hover:text-brunch-700"
+              className="h-8 w-8 text-pizzetna-400 hover:text-pizzetna-700"
               onClick={() => removeItem(item.id)}
             >
               <X className="h-4 w-4" />
@@ -228,11 +228,11 @@ export const Cart = () => {
       {items.length > 0 && (
         <div className="space-y-4 py-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-brunch-600">Subtotal</span>
+            <span className="text-sm text-pizzetna-600">Subtotal</span>
             <span className="font-medium">${totalPrice.toFixed(2)}</span>
           </div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-brunch-600">Delivery Fee</span>
+            <span className="text-sm text-pizzetna-600">Delivery Fee</span>
             <span className="font-medium">$3.99</span>
           </div>
           
@@ -247,8 +247,8 @@ export const Cart = () => {
           
           <Separator />
           <div className="flex items-center justify-between">
-            <span className="font-medium text-brunch-900">Total</span>
-            <span className="font-bold text-brunch-900">${finalTotal}</span>
+            <span className="font-medium text-pizzetna-900">Total</span>
+            <span className="font-bold text-pizzetna-900">${finalTotal}</span>
           </div>
           
           {user && (
@@ -265,7 +265,7 @@ export const Cart = () => {
         <Button 
           onClick={handleCheckout}
           disabled={items.length === 0}
-          className="bg-brunch-500 hover:bg-brunch-600 text-white"
+          className="bg-pizzetna-500 hover:bg-pizzetna-600 text-white w-full"
         >
           Proceed to Checkout
         </Button>
@@ -273,7 +273,7 @@ export const Cart = () => {
           <Button 
             variant="outline" 
             onClick={clearCart}
-            className="border-brunch-200"
+            className="border-pizzetna-200 w-full"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Clear Cart
@@ -310,25 +310,25 @@ export const Cart = () => {
         
         <TabsContent value="cash">
           <div className="space-y-4">
-            <div className="bg-brunch-50 p-4 rounded-md">
+            <div className="bg-pizzetna-50 p-4 rounded-md">
               <h4 className="font-medium mb-2 flex items-center">
                 <TruckIcon className="h-4 w-4 mr-2" />
                 Cash on Delivery
               </h4>
-              <p className="text-sm text-brunch-600">
+              <p className="text-sm text-pizzetna-600">
                 Pay with cash when your order is delivered to your doorstep.
               </p>
             </div>
             
             <div className="py-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-brunch-600">Total Amount:</span>
+                <span className="text-sm text-pizzetna-600">Total Amount:</span>
                 <span className="font-bold">${finalTotal}</span>
               </div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-brunch-600">Delivery Address:</span>
+                <span className="text-sm text-pizzetna-600">Delivery Address:</span>
               </div>
-              <div className="bg-brunch-50 p-3 rounded text-sm">
+              <div className="bg-pizzetna-50 p-3 rounded text-sm">
                 <p><strong>{deliveryInfo?.fullName}</strong></p>
                 <p>{deliveryInfo?.address}</p>
                 <p>{deliveryInfo?.city}, {deliveryInfo?.postalCode}</p>
@@ -342,7 +342,7 @@ export const Cart = () => {
             <Button
               onClick={handleCashPayment}
               disabled={isProcessing}
-              className="w-full bg-brunch-500 hover:bg-brunch-600 text-white"
+              className="w-full bg-pizzetna-500 hover:bg-pizzetna-600 text-white"
             >
               {isProcessing ? "Processing..." : "Place Order"}
             </Button>
@@ -357,10 +357,10 @@ export const Cart = () => {
       <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
         <Check className="h-8 w-8 text-green-600" />
       </div>
-      <h3 className="text-xl font-medium text-brunch-900 mb-2">Order Placed Successfully!</h3>
-      <p className="text-sm text-brunch-600 mb-4">Thank you for your order</p>
+      <h3 className="text-xl font-medium text-pizzetna-900 mb-2">Order Placed Successfully!</h3>
+      <p className="text-sm text-pizzetna-600 mb-4">Thank you for your order</p>
       {paymentMethod === 'cash' && (
-        <div className="bg-brunch-50 p-3 rounded-md text-sm text-left w-full mt-4">
+        <div className="bg-pizzetna-50 p-3 rounded-md text-sm text-left w-full mt-4">
           <p className="font-medium">Please have the exact change ready:</p>
           <p className="font-bold text-lg">${finalTotal}</p>
         </div>
@@ -408,17 +408,17 @@ export const Cart = () => {
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center justify-center py-4 text-center">
-          <div className="h-16 w-16 bg-brunch-100 rounded-full flex items-center justify-center mb-4">
-            <Coins className="h-8 w-8 text-brunch-600" />
+          <div className="h-16 w-16 bg-pizzetna-100 rounded-full flex items-center justify-center mb-4">
+            <Coins className="h-8 w-8 text-pizzetna-600" />
           </div>
-          <p className="text-sm text-brunch-600 mb-4">
+          <p className="text-sm text-pizzetna-600 mb-4">
             Your order has been placed successfully. Would you like to create an account to start earning loyalty rewards?
           </p>
         </div>
         <DialogFooter className="sm:justify-center gap-2 flex-col sm:flex-row">
           <Button
             variant="default"
-            className="bg-brunch-500 hover:bg-brunch-600"
+            className="bg-pizzetna-500 hover:bg-pizzetna-600 text-white"
             onClick={handleLoginRedirect}
           >
             <LogIn className="mr-2 h-4 w-4" />
@@ -426,7 +426,7 @@ export const Cart = () => {
           </Button>
           <Button
             variant="outline"
-            className="border-brunch-200"
+            className="border-pizzetna-200"
             onClick={() => {
               setLoginDialogOpen(false);
               clearCart();
@@ -451,24 +451,24 @@ export const Cart = () => {
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center justify-center py-4 text-center">
-          <div className="h-16 w-16 bg-brunch-100 rounded-full flex items-center justify-center mb-4">
-            <Coins className="h-8 w-8 text-brunch-600" />
+          <div className="h-16 w-16 bg-pizzetna-100 rounded-full flex items-center justify-center mb-4">
+            <Coins className="h-8 w-8 text-pizzetna-600" />
           </div>
-          <p className="text-sm text-brunch-600 mb-4">
+          <p className="text-sm text-pizzetna-600 mb-4">
             Would you like to spin the wheel now to earn loyalty points?
           </p>
         </div>
         <DialogFooter className="sm:justify-center gap-2 flex-col sm:flex-row">
           <Button
             variant="default"
-            className="bg-brunch-500 hover:bg-brunch-600"
+            className="bg-pizzetna-500 hover:bg-pizzetna-600 text-white"
             onClick={handleSpinRedirect}
           >
             Spin the Wheel
           </Button>
           <Button
             variant="outline"
-            className="border-brunch-200"
+            className="border-pizzetna-200"
             onClick={() => {
               setSpinDialogOpen(false);
               clearCart();

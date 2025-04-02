@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -76,8 +75,8 @@ export const PaymentForm = ({ totalAmount, onSuccess }: { totalAmount: string, o
         <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
           <Check className="h-8 w-8 text-green-600" />
         </div>
-        <h3 className="text-xl font-medium text-brunch-900 mb-2">Payment Successful!</h3>
-        <p className="text-sm text-brunch-600 mb-4">Thank you for your order</p>
+        <h3 className="text-xl font-medium text-pizzetna-900 mb-2">Payment Successful!</h3>
+        <p className="text-sm text-pizzetna-600 mb-4">Thank you for your order</p>
       </div>
     );
   }
@@ -190,7 +189,7 @@ export const PaymentForm = ({ totalAmount, onSuccess }: { totalAmount: string, o
           
           <Button 
             type="submit" 
-            className="w-full bg-brunch-500 hover:bg-brunch-600 mt-6"
+            className="w-full bg-pizzetna-500 hover:bg-pizzetna-600 text-white mt-6"
             disabled={isProcessing}
           >
             <CreditCard className="mr-2 h-4 w-4" />

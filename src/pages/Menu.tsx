@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -160,7 +159,7 @@ export default function Menu() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredItems.map((item) => (
                       <Card key={item.id} className="overflow-hidden">
-                        <div className="h-48 w-full overflow-hidden bg-brunch-100">
+                        <div className="h-48 w-full overflow-hidden bg-pizzetna-100">
                           {item.image_url ? (
                             <img 
                               src={item.image_url} 
@@ -168,7 +167,7 @@ export default function Menu() {
                               className="h-full w-full object-cover transition-transform hover:scale-105"
                             />
                           ) : (
-                            <div className="h-full w-full flex items-center justify-center bg-brunch-100 text-brunch-400">
+                            <div className="h-full w-full flex items-center justify-center bg-pizzetna-100 text-pizzetna-400">
                               No image available
                             </div>
                           )}
@@ -176,7 +175,7 @@ export default function Menu() {
                         <CardHeader>
                           <div className="flex justify-between items-start">
                             <CardTitle className="text-xl">{item.name}</CardTitle>
-                            <Badge variant="outline" className="font-bold text-brunch-700">
+                            <Badge variant="outline" className="font-bold text-pizzetna-700">
                               ${item.price.toFixed(2)}
                             </Badge>
                           </div>
@@ -195,12 +194,12 @@ export default function Menu() {
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <p className="text-sm text-brunch-600">{item.description}</p>
+                          <p className="text-sm text-pizzetna-600">{item.description}</p>
                         </CardContent>
                         <CardFooter>
                           <Button 
                             onClick={() => addToCart(item)} 
-                            className="w-full bg-brunch-500 hover:bg-brunch-600"
+                            className="w-full bg-pizzetna-500 hover:bg-pizzetna-600 text-white"
                           >
                             Add to Cart
                           </Button>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -138,7 +137,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({ onSubmit }) => {
         <div className="pt-4">
           <button
             type="submit"
-            className="w-full bg-brunch-500 hover:bg-brunch-600 text-white py-2 px-4 rounded-md"
+            className="w-full bg-pizzetna-500 hover:bg-pizzetna-600 text-white py-2 px-4 rounded-md"
           >
             Continue
           </button>

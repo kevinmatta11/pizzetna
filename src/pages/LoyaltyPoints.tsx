@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { loyaltyService, LoyaltyTransaction } from '@/services/loyaltyService';
@@ -109,7 +108,7 @@ const LoyaltyPoints = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Trophy className="h-5 w-5 mr-2 text-brunch-500" />
+                  <Trophy className="h-5 w-5 mr-2 text-pizzetna-500" />
                   Spin to Win
                 </CardTitle>
                 <CardDescription>
@@ -125,14 +124,14 @@ const LoyaltyPoints = () => {
                     </p>
                     <Button 
                       onClick={handleSpinClick}
-                      className="bg-brunch-500 hover:bg-brunch-600"
+                      className="bg-pizzetna-500 hover:bg-pizzetna-600 text-white"
                     >
                       Go to Spin Wheel
                     </Button>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center">
-                    <p className="text-sm text-brunch-500 mb-4">
+                    <p className="text-sm text-pizzetna-500 mb-4">
                       Place an order to earn a spin!
                     </p>
                     <Button 

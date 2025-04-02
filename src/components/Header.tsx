@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, LogIn, UserPlus, LogOut, User, MapPin } from 'lucide-react';
@@ -51,29 +50,33 @@ const Header = () => {
     <header className={`fixed w-full z-30 transition-all duration-300 ${scrolled ? 'bg-white shadow-md py-2' : 'bg-transparent py-4'}`}>
       <div className="container flex justify-between items-center">
         <Link to="/" className="flex items-center">
-          <span className="text-2xl font-display font-bold text-brunch-900">Pizza<span className="text-brunch-500">Brunch</span></span>
+          <img 
+            src="/pizzetnaLogo.png" 
+            alt="Pizzetna" 
+            className="h-12 w-auto"
+          />
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
           <NavLink to="/" className={({ isActive }) => 
             `text-sm font-medium transition ${isActive 
-              ? 'text-brunch-500' 
-              : 'text-brunch-700 hover:text-brunch-500'}`
+              ? 'text-pizzetna-500' 
+              : 'text-black hover:text-pizzetna-500'}`
           }>
             Home
           </NavLink>
           <NavLink to="/menu" className={({ isActive }) => 
             `text-sm font-medium transition ${isActive 
-              ? 'text-brunch-500' 
-              : 'text-brunch-700 hover:text-brunch-500'}`
+              ? 'text-pizzetna-500' 
+              : 'text-black hover:text-pizzetna-500'}`
           }>
             Menu
           </NavLink>
           <NavLink to="/about" className={({ isActive }) => 
             `text-sm font-medium transition ${isActive 
-              ? 'text-brunch-500' 
-              : 'text-brunch-700 hover:text-brunch-500'}`
+              ? 'text-pizzetna-500' 
+              : 'text-black hover:text-pizzetna-500'}`
           }>
             About
           </NavLink>
@@ -114,7 +117,7 @@ const Header = () => {
                     <LogIn className="h-4 w-4" />
                     Login
                   </Button>
-                  <Button className="bg-brunch-500 hover:bg-brunch-600 text-white gap-2" onClick={() => navigate("/auth?tab=signup")}>
+                  <Button className="bg-pizzetna-500 hover:bg-pizzetna-600 text-white gap-2" onClick={() => navigate("/auth?tab=signup")}>
                     <UserPlus className="h-4 w-4" />
                     Register
                   </Button>
@@ -137,22 +140,22 @@ const Header = () => {
               <nav className="flex flex-col gap-4 mt-8">
                 <NavLink to="/" className={({ isActive }) => 
                   `py-2 text-base font-medium transition ${isActive 
-                    ? 'text-brunch-500' 
-                    : 'text-brunch-700 hover:text-brunch-500'}`
+                    ? 'text-pizzetna-500' 
+                    : 'text-black hover:text-pizzetna-500'}`
                 }>
                   Home
                 </NavLink>
                 <NavLink to="/menu" className={({ isActive }) => 
                   `py-2 text-base font-medium transition ${isActive 
-                    ? 'text-brunch-500' 
-                    : 'text-brunch-700 hover:text-brunch-500'}`
+                    ? 'text-pizzetna-500' 
+                    : 'text-black hover:text-pizzetna-500'}`
                 }>
                   Menu
                 </NavLink>
                 <NavLink to="/about" className={({ isActive }) => 
                   `py-2 text-base font-medium transition ${isActive 
-                    ? 'text-brunch-500' 
-                    : 'text-brunch-700 hover:text-brunch-500'}`
+                    ? 'text-pizzetna-500' 
+                    : 'text-black hover:text-pizzetna-500'}`
                 }>
                   About
                 </NavLink>
@@ -183,7 +186,7 @@ const Header = () => {
                           <LogIn className="h-4 w-4" />
                           Login
                         </Button>
-                        <Button className="bg-brunch-500 hover:bg-brunch-600 text-white gap-2 justify-start" onClick={() => navigate("/auth?tab=signup")}>
+                        <Button className="bg-pizzetna-500 hover:bg-pizzetna-600 text-white gap-2 justify-start" onClick={() => navigate("/auth?tab=signup")}>
                           <UserPlus className="h-4 w-4" />
                           Register
                         </Button>
